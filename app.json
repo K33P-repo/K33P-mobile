@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "k33p-mobil",
+    "slug": "k33p-mobil",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/K33P.png",
+    "scheme": "k33pmobil",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "cover",
+          "backgroundColor": "#0000"
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "../assets/fonts/Sora-Regular.ttf",
+            "./assets/fonts/Sora-Regular.ttf",
+            "../assets/fonts/Sora-SemiBold.ttf",
+            "../assets/fonts/Sora-Bold.ttf"
+          ]
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
