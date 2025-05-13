@@ -1,12 +1,13 @@
-import useCustomFonts from '@/hooks/useCustomFonts';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { Animated, View } from 'react-native';
+
+import useCustomFonts from '@/hooks/useCustomFonts';
+import { Animated } from 'react-native';
 import './global.css';
 
 export default function RootLayout() {
-  const { fontsLoaded } = useCustomFonts(); // ✅ fix destructure
+  const fontsLoaded = useCustomFonts();
   const [showSplash, setShowSplash] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(1));
 
@@ -31,22 +32,13 @@ export default function RootLayout() {
   }, [fontsLoaded, fadeAnim]);
 
   return (
-    <View className="flex-1 bg-black">
-      {showSplash && (
-        <Animated.View
-          className="absolute inset-0 bg-black z-50"
-          style={{ opacity: fadeAnim }}
-        />
-      )}
-
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-      </Stack>
-    </View>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen name="(auth)" />
+    </Stack>
   );
 }
