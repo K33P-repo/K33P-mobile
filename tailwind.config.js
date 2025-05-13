@@ -16,7 +16,6 @@ module.exports = {
       },
       fontFamily: {
         sora: ['Sora-Regular'],
-        'sora-medium': ['Sora-Medium'],
         'sora-semibold': ['Sora-SemiBold'],
         'sora-bold': ['Sora-Bold'],
       },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 
 type ButtonProps = {
   text: string;
@@ -21,7 +21,7 @@ export function Button({
   let textClasses = 'font-sora-semibold text-lg text-center';
 
   if (isDisabled) {
-    buttonClasses += ' bg-gray-400';
+    buttonClasses += ' ';
     textClasses += ' text-white';
   } else if (outline) {
     buttonClasses += ' border-2 border-yellow-500 bg-transparent';

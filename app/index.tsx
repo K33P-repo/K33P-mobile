@@ -3,7 +3,9 @@ import { Link, useRouter } from 'expo-router';
 import React from 'react';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import './global.css';
+
 
 export default function Index() {
   const router = useRouter();
@@ -20,7 +22,7 @@ export default function Index() {
   };
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white p-4">
+    <SafeAreaView edges={['top']} className="flex-1 bg-red-100 p-4">
       <View className="flex-1 justify-center items-center">
         <View className="w-full items-center mb-8">
           <Text className="font-sora-bold text-2xl">Welcome to K33P</Text>
