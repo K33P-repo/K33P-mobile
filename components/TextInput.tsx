@@ -1,64 +1,96 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Keyboard,
-  TouchableWithoutFeedback,
-} from "react-native";
+import React, { useState } from 'react';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
+import BackspaceIcon from './../assets/images/backspace.png';
 
-type PhoneInputProps = {
-  title?: string;
-  placeholder?: string;
-  initialValue?: string;
-  minLength?: number;
-  onValidChange?: (isValid: boolean) => void;
-  onSubmit?: (phoneNumber: string) => void;
-  autoFocus?: boolean;
+interface NumericKeypadProps {
+  onKeyPress?: (value: string) => void;
+  onBackspace?: () => void;
+  isVisible?: boolean;
+}
+
+export const NumericKeypad: React.FC<NumericKeypadProps> = ({
+  onKeyPress = () => {},
+  onBackspace = () => {},
+  isVisible = true,
+}) => {
+  if (!isVisible) return null;
+
+  return (
+    <View className="w-full bg-gray-100 border-t border-gray-300 absolute bottom-0">
+      {/* Keypad Rows */}
+      <View className="flex-row justify-between px-4 py-3">
+        {['1', '2', '3'].map((num) => (
+          <KeyButton key={num} value={num} onPress={onKeyPress} />
+        ))}
+      </View>
+      
+      <View className="flex-row justify-between px-4 py-3">
+        {['4', '5', '6'].map((num) => (
+          <KeyButton key={num} value={num} onPress={onKeyPress} />
+        ))}
+      </View>
+      
+      <View className="flex-row justify-between px-4 py-3">
+        {['7', '8', '9'].map((num) => (
+          <KeyButton key={num} value={num} onPress={onKeyPress} />
+        ))}
+      </View>
+      
+      {/* Bottom Row */}
+      <View className="flex-row justify-between px-4 py-3">
+        <View className="w-1/3" /> {/* Spacer */}
+        <KeyButton value="0" onPress={onKeyPress} />
+        <TouchableOpacity
+          className="w-1/3 items-center justify-center"
+          onPress={onBackspace}
+        >
+          <Image source={BackspaceIcon} className="w-8 h-8" resizeMode="contain" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 };
 
-export default function PhoneInput({
-  title = "Enter Phone Number",
-  placeholder = "+234-801-2345-678",
-  initialValue = "",
-  minLength = 10,
-  onValidChange,
-  autoFocus = true,
-}: PhoneInputProps) {
-  const [phoneNumber, setPhoneNumber] = useState(initialValue);
-  const [isValid, setIsValid] = useState(false);
+const KeyButton = ({ value, onPress }: { value: string; onPress: (value: string) => void }) => (
+  <TouchableOpacity
+    className="w-1/3 items-center justify-center py-3"
+    onPress={() => onPress(value)}
+  >
+    <Text className="text-3xl text-gray-800">{value}</Text>
+  </TouchableOpacity>
+);
 
-  const handlePhoneChange = (text: string) => {
-    // Format: Allow only numbers, +, and hyphens
-    const formattedText = text.replace(/[^\d+-]/g, "");
-    setPhoneNumber(formattedText);
+// Example usage with input field
+export const InputWithKeypad = () => {
+  const [value, setValue] = useState('');
+  const [showKeypad, setShowKeypad] = useState(false);
 
-    // Validation (count only digits)
-    const digitsOnly = formattedText.replace(/\D/g, "");
-    const valid = digitsOnly.length >= minLength;
-    setIsValid(valid);
-    onValidChange?.(valid);
+  const handleKeyPress = (num: string) => {
+    setValue(prev => prev + num);
+  };
+
+  const handleBackspace = () => {
+    setValue(prev => prev.slice(0, -1));
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 bg-white px-5 pt-12">
-        {/* Title */}
-        <Text className="text-2xl font-semibold text-black mb-6">{title}</Text>
+    <View className="flex-1">
+      {/* Your input field - just trigger the keypad visibility */}
+      <TouchableOpacity 
+        className="p-4 border-b border-gray-300"
+        onPress={() => setShowKeypad(true)}
+      >
+        <Text className="text-lg">
+          {value || 'Tap to enter number'}
+        </Text>
+      </TouchableOpacity>
 
-        {/* Input Field */}
-        <TextInput
-          className="w-full bg-gray-100 text-black rounded-lg px-4 py-3 text-base border border-gray-800 mb-6"
-          placeholder={placeholder}
-          placeholderTextColor="#666"
-          keyboardType="phone-pad"
-          value={phoneNumber}
-          onChangeText={handlePhoneChange}
-          autoFocus={autoFocus}
-          style={{ height: 48 }} // Explicit height ensures visibility
-        />
-      </View>
-    </TouchableWithoutFeedback>
+      {/* The always-visible keypad */}
+      <NumericKeypad
+        onKeyPress={handleKeyPress}
+        onBackspace={handleBackspace}
+        isVisible={showKeypad}
+      />
+    </View>
   );
-}
+};
