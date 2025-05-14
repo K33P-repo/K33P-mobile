@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
@@ -28,36 +27,57 @@ export default function PhoneInput({
 }: PhoneInputProps) {
   const [phoneNumber, setPhoneNumber] = useState(initialValue);
   const [isValid, setIsValid] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   const handlePhoneChange = (text: string) => {
-    // Format: Allow only numbers, +, and hyphens
     const formattedText = text.replace(/[^\d+-]/g, "");
     setPhoneNumber(formattedText);
-
-    // Validation (count only digits)
     const digitsOnly = formattedText.replace(/\D/g, "");
     const valid = digitsOnly.length >= minLength;
     setIsValid(valid);
     onValidChange?.(valid);
+    setShowError(false); // Hide error when typing
+  };
+
+  const validatePhoneNumber = () => {
+    const digitsOnly = phoneNumber.replace(/\D/g, "");
+    const valid = digitsOnly.length >= minLength;
+    setShowError(!valid);
+    return valid;
+  };
+
+  const handleBlur = () => {
+    validatePhoneNumber();
   };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View className="flex-1 bg-white px-5 pt-12">
         {/* Title */}
-        <Text className="text-2xl font-semibold text-black mb-6">{title}</Text>
+        <Text className="w-[335px] h-[21px] font-sora font-medium text-[14px] leading-[21px] text-mainBlack">
+          {title}
+        </Text>
 
         {/* Input Field */}
         <TextInput
-          className="w-full bg-gray-100 text-black rounded-lg px-4 py-3 text-base border border-gray-800 mb-6"
+          className="w-[335px] h-[45px] bg-white rounded-lg border border-gray-300 
+                    pt-3 pr-4 pb-3 pl-4 mb-1 text-base text-black"
           placeholder={placeholder}
           placeholderTextColor="#666"
           keyboardType="phone-pad"
           value={phoneNumber}
           onChangeText={handlePhoneChange}
+          onBlur={handleBlur}
           autoFocus={autoFocus}
-          style={{ height: 48 }} // Explicit height ensures visibility
+          textAlignVertical="center"
         />
+
+        {/* Error Message - Only shown when invalid and blurred or submitted */}
+        {showError && (
+          <Text className="w-[335px] text-red-500 text-[12px] leading-[18px] mb-2">
+            Invalid Phone number. Enter a valid phone number
+          </Text>
+        )}
       </View>
     </TouchableWithoutFeedback>
   );
