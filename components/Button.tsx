@@ -18,17 +18,17 @@ export function Button({
 }: ButtonProps) {
   // Base classes
   let buttonClasses = 'py-3 rounded-lg w-full items-center justify-center';
-  let textClasses = 'font-sora-semibold text-lg text-center';
+  let textClasses = 'font-sora-semibold text-sm text-center';
 
   if (isDisabled) {
-    buttonClasses += ' ';
-    textClasses += ' text-white';
+    buttonClasses += ' bg-neutral300';
+    textClasses += ' text-neutral50';
   } else if (outline) {
-    buttonClasses += ' border-2 border-yellow-500 bg-transparent';
-    textClasses += ' text-yellow-500';
+    buttonClasses += ' border border-main bg-transparent';
+    textClasses += ' text-main';
   } else {
     buttonClasses += ' bg-yellow-400';
-    textClasses += ' text-black';
+    textClasses += ' text-neutral800';
   }
 
   return (

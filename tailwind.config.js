@@ -13,6 +13,8 @@ module.exports = {
         success500:'#4CAF50',
         error500: '#F44336',
         mainBlack: '#1A1A1A',
+        neutral300:'#666666',
+        neutral50:'#E8E8E8'
       },
       fontFamily: {
         sora: ['Sora-Regular'],

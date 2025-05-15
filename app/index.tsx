@@ -1,18 +1,19 @@
 import { Button } from '@/components/Button';
 import { Link, useRouter } from 'expo-router';
 import React from 'react';
-import { Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image, SafeAreaView, View } from 'react-native';
 
 import './global.css';
 
+// Import local images
+import logoImage from './../assets/images/K33P.png';
+import topImage from './../assets/images/top-mask.png';
 
 export default function Index() {
   const router = useRouter();
-  // Mock functions for demonstration
+  
   const handleSignIn = () => {
     console.log('Sign In pressed');
-    // In a real app, navigate programmatically here
     router.push('/sign-in');
   };
 
@@ -22,38 +23,38 @@ export default function Index() {
   };
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-red-100 p-4">
-      <View className="flex-1 justify-center items-center">
-        <View className="w-full items-center mb-8">
-          <Text className="font-sora-bold text-2xl">Welcome to K33P</Text>
-        </View>
-        
-        <View className="w-full max-w-xs gap-y-4">
-          {/* Sign In Button */}
-          <Link href="/(auth)/sign-in" asChild>
-            <Button
-              text="Sign In"
-              onPress={handleSignIn}
-              outline={false}
-            />
-          </Link>
-          
-          {/* Sign Up Button */}
-          <Link href="/(auth)/sign-up" asChild>
-            <Button
-              text="Sign Up"
-              onPress={handleSignUp}
-              outline={true}
-            />
-          </Link>
+    <SafeAreaView className="flex-1 bg-black">
+      {/* Top Image Section */}
+      <View className="w-full ">
+        <Image 
+          source={topImage} 
+          resizeMode="cover" // Maintain the aspect ratio and cover the area
+        />
+      </View>
 
-          {/* Disabled State Example */}
-          <Button
-            text="Disabled Button"
-            onPress={() => {}}
-            isDisabled={true}
+      {/* Logo in the center */}
+      <View className="absolute inset-0 justify-center items-center">
+        <Image 
+          source={logoImage} 
+        />
+      </View>
+
+      {/* Buttons at the bottom */}
+      <View className="w-full absolute bottom-10 px-6 gap-y-4">
+        <Link href="/(auth)/sign-in" asChild>
+          <Button 
+            text="Login" 
+            onPress={handleSignIn} 
+            outline={true} 
           />
-        </View>
+        </Link>
+        
+        <Link href="/(auth)/sign-up" asChild>
+          <Button 
+            text="Create Account" 
+            onPress={handleSignUp} 
+          />
+        </Link>
       </View>
     </SafeAreaView>
   );
