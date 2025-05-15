@@ -17,7 +17,7 @@ export function Button({
   isLoading = false,
 }: ButtonProps) {
   // Base classes
-  let buttonClasses = 'py-3 rounded-lg w-full items-center justify-center';
+  let buttonClasses = 'py-3 rounded-xl w-full items-center justify-center';
   let textClasses = 'font-sora-semibold text-sm text-center';
 
   if (isDisabled) {
