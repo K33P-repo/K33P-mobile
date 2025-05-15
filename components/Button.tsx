@@ -9,7 +9,7 @@ type ButtonProps = {
   isLoading?: boolean;
 };
 
-export function Button({
+export default function Button({
   text,
   onPress,
   isDisabled = false,

@@ -2,7 +2,7 @@ import { View } from "react-native";
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Entypo from '@expo/vector-icons/Entypo';
 
-export default function TabOneScreen() {
+export default function TabLayout() {
   return (
     <View className="flex-1 items-center justify-center bg-[#1e1e1e]">
       <View className="flex-row items-center"> 

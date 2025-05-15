@@ -43,13 +43,13 @@ export default function PhoneInput({
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 bg-white px-5 pt-12">
+      <View className="flex-1 bg-[#1A1A1A] px-5 pt-12">
         {/* Title */}
-        <Text className="text-2xl font-semibold text-black mb-6">{title}</Text>
+        <Text className="text-2xl font-semibold text-[#FFFFFF] mb-6">{title}</Text>
 
         {/* Input Field */}
         <TextInput
-          className="w-full bg-gray-100 text-black rounded-lg px-4 py-3 text-base border border-gray-800 mb-6"
+          className="w-full bg-[#1A1A1A] text-[#FFFFFF] rounded-lg px-4 py-3 text-base border border-[#969696] mb-6"
           placeholder={placeholder}
           placeholderTextColor="#666"
           keyboardType="phone-pad"
