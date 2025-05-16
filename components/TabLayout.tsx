@@ -4,10 +4,10 @@ import { View } from "react-native";
 
 export default function TabLayout() {
   return (
-    <View className="flex-1 items-center justify-center bg-[#1e1e1e]">
-      <View className="flex-row items-center"> 
+    <View className="items-center bg-mainBlack h-20">
+      <View className="flex-row items-center w-[120px] h-4 mt-16 ml-4"> 
         {/* First Material Icon - Wrapped in View */}
-        <View className="w-8 h-8 justify-center items-center"> 
+        <View className="w-8 h-6 justify-center items-center"> 
           <MaterialCommunityIcons name="briefcase" size={20} color="#B8B8B8" />
         </View>
         
@@ -17,7 +17,7 @@ export default function TabLayout() {
         </View>
         
         {/* Second Material Icon */}
-        <View className="w-8 h-8 justify-center items-center">
+        <View className="w-8 h-6 justify-center items-center">
           <MaterialCommunityIcons name="briefcase" size={20} color="#B8B8B8" />
         </View>
 
@@ -26,7 +26,7 @@ export default function TabLayout() {
         </View>
 
         {/* Third Material Icon */}
-        <View className="w-8 h-8 justify-center items-center">
+        <View className="w-8 h-6 justify-center items-center ">
           <MaterialCommunityIcons name="briefcase" size={20} color="#B8B8B8" />
         </View>
       </View>

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
@@ -16,6 +15,10 @@ type PhoneInputProps = {
   onValidChange?: (isValid: boolean) => void;
   onSubmit?: (phoneNumber: string) => void;
   autoFocus?: boolean;
+  onChangeText?: (text: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  showSoftInputOnFocus: boolean;
 };
 
 export default function PhoneInput({
@@ -25,6 +28,9 @@ export default function PhoneInput({
   minLength = 10,
   onValidChange,
   autoFocus = true,
+  onChangeText,
+  onFocus,
+  onBlur,
 }: PhoneInputProps) {
   const [phoneNumber, setPhoneNumber] = useState(initialValue);
   const [isValid, setIsValid] = useState(false);
@@ -43,20 +49,27 @@ export default function PhoneInput({
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 bg-[#1A1A1A] px-5 pt-12">
+      <View className=" flex-1 bg-[#1A1A1A] pt-14">
         {/* Title */}
-        <Text className="text-2xl font-semibold text-[#FFFFFF] mb-6">{title}</Text>
+        <Text className="w-[335px] h-[21px] font-sora font-medium text-[14px] leading-[21px] tracking-[0] text-white">
+          {title}
+        </Text>
 
         {/* Input Field */}
         <TextInput
-          className="w-full bg-[#1A1A1A] text-[#FFFFFF] rounded-lg px-4 py-3 text-base border border-[#969696] mb-6"
+          className="w-full bg-mainBlack text-white rounded-lg py-3 border border-neutral200 mb-6 font-sora text-[14px] leading-[21px] tracking-[0]"
           placeholder={placeholder}
-          placeholderTextColor="#666"
-          keyboardType="phone-pad"
+          placeholderTextColor="neutral300"
           value={phoneNumber}
-          onChangeText={handlePhoneChange}
+          onChangeText={(text) => {
+            handlePhoneChange(text);
+            onChangeText?.(text);
+          }}
           autoFocus={autoFocus}
-          style={{ height: 48 }} // Explicit height ensures visibility
+          style={{ height: 48 }}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          showSoftInputOnFocus={false}
         />
       </View>
     </TouchableWithoutFeedback>

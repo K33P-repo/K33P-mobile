@@ -25,9 +25,9 @@ const NumericKeypad: React.FC<NumericKeypadProps> = ({
   );
 
   return (
-    <View className="w-full bg-gray-800 absolute bottom-0 ">
+    <View className="w-[310px] mx-auto bg-mainBlack absolute bottom-8 left-0 right-0 border border-red-50">
       {/* Row 1 */}
-      <View className="flex-row justify-between mb-8 ">
+      <View className="flex-row justify-between mb-8">
         {["1", "2", "3"].map((num) => (
           <KeyButton key={num} value={num} />
         ))}
