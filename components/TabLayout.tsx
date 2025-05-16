@@ -1,6 +1,6 @@
-import { View } from "react-native";
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Entypo from '@expo/vector-icons/Entypo';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { View } from "react-native";
 
 export default function TabLayout() {
   return (

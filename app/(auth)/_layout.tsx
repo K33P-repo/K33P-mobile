@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 export default function Layout() {
   return (
-    <View className="flex-1 bg-mainBlack">
+    <View className="flex-1 bg-">
       <Slot />
     </View>
   );

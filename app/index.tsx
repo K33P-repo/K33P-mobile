@@ -1,4 +1,3 @@
-import { Button } from '@/components/Button';
 import { Link, useRouter } from 'expo-router';
 import React from 'react';
 import { Image, SafeAreaView, View } from 'react-native';
@@ -8,6 +7,7 @@ import './global.css';
 // Import local images
 import logoImage from './../assets/images/K33P.png';
 import topImage from './../assets/images/top-mask.png';
+import Button from '@/components/Button';
 
 export default function Index() {
   const router = useRouter();

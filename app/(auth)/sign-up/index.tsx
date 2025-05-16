@@ -1,12 +1,14 @@
-import { View } from "react-native";
-import React from "react";
+import Button from "@/components/Button";
 import PhoneInput from "@/components/PhoneInput";
 import TabLayout from "@/components/TabLayout";
-import Button from "@/components/Button";
+import { useRouter } from "expo-router";
+import React from "react";
+import { View } from "react-native";
 
 export default function PhoneInputScreen() {
+  const router = useRouter();
   return (
-    <View className="absolute w-[375px] h-[812px] top-[100px] left-[949px] rounded-3xl bg-[#1A1A1A] overflow-hidden shadow-lg">
+    <View className="flex-1">
       
       <View className="flex-1 p-5 justify-between pb-10">
         <TabLayout />
@@ -20,8 +22,7 @@ export default function PhoneInputScreen() {
         />
         <Button
           text="Proceed"
-          isDisabled={true}
-          onPress={() => console.log("Proceed button pressed")}
+          onPress={() => router.push('/sign-up/otp')}
           outline={false}
           isLoading={false}
         />
