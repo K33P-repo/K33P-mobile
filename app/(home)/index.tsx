@@ -1,4 +1,3 @@
-import { Button } from '@/components/Button'
 import { useRouter } from 'expo-router'
 import React, { useRef, useState } from 'react'
 import {
@@ -15,6 +14,7 @@ import TopLeft from '../../assets/images/info.png'
 import ArrowLeft from '../../assets/images/left.png'
 import TopRight from '../../assets/images/person.png'
 import ArrowRight from '../../assets/images/right.png'
+import Button from '@/components/Button'
 
 const { width: screenWidth } = Dimensions.get('window')
 
