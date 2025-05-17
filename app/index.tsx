@@ -1,3 +1,4 @@
+import Button from '@/components/Button';
 import useCustomFonts from '@/hooks/useCustomFonts';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -5,7 +6,6 @@ import { Image, SafeAreaView, View } from 'react-native';
 import logoImage from './../assets/images/K33P.png';
 import topImage from './../assets/images/top-mask.png';
 import './global.css';
-import Button from '@/components/Button';
 
 export default function Index() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function Index() {
       <View className="w-full absolute bottom-10 px-6 gap-y-4">
         <Button text="Login" onPress={() => router.push('/sign-in')} outline />
         <Button text="Create Account" onPress={() => router.push('/sign-up')} />
-        <Button text="Home" onPress={() => router.push('/(home)')} />
+        <Button text="Home" onPress={() => router.push('/sign-up/biometrics')} />
       </View>
     </SafeAreaView>
   );
