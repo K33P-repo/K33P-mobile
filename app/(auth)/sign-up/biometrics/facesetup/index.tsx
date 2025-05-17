@@ -1,178 +1,110 @@
-import Button from '@/components/Button';
-import { Camera } from 'expo-camera';
-import * as FaceDetector from 'expo-face-detector';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Easing, StyleSheet, Text, View } from 'react-native';
-import { Circle, Svg } from 'react-native-svg';
+import { Dimensions, Text, View } from 'react-native';
+import { Camera, useCameraDevices } from 'react-native-vision-camera';
+import { useFaceDetector } from 'vision-camera-face-detector';
 
-const { width } = Dimensions.get('window');
-const CIRCLE_SIZE = width * 0.7;
-const SCAN_DURATION = 5000; // 5 seconds for full scan
-
-export default function FaceScanScreen() {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [faces, setFaces] = useState<any[]>([]);
+const FaceScanScreen = () => {
+  const devices = useCameraDevices();
+  const device = devices.front;
+  const camera = useRef<Camera>(null);
+  const [hasPermission, setHasPermission] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const cameraRef = useRef<Camera>(null);
-  const progressAnim = useRef(new Animated.Value(0)).current;
+  const { width } = Dimensions.get('window');
+  const circleSize = width * 0.7;
 
-  // Start face scan with progress animation
-  const startScan = () => {
-    setIsScanning(true);
-    setScanProgress(0);
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: SCAN_DURATION,
-      easing: Easing.linear,
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished) {
-        setIsComplete(true);
-        setIsScanning(false);
-      }
-    });
-  };
+  // Face detection
+  const { faces } = useFaceDetector(camera, {
+    tracking: true,
+    performanceMode: 'fast',
+  });
 
-  // Reset scan
-  const resetScan = () => {
-    progressAnim.setValue(0);
-    setIsScanning(false);
-    setIsComplete(false);
-    setScanProgress(0);
-  };
-
-  // Handle face detection
-  const handleFacesDetected = ({ faces }: { faces: any[] }) => {
-    setFaces(faces);
-    if (faces.length > 0 && isScanning && !isComplete) {
-      const newProgress = Math.min(100, scanProgress + 0.5); // Increment progress
-      setScanProgress(newProgress);
-    }
-  };
-
-  // Check camera permissions
   useEffect(() => {
     (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
+      const status = await Camera.requestCameraPermission();
+      setHasPermission(status === 'authorized');
     })();
   }, []);
 
-  if (hasPermission === null) return <View />;
-  if (hasPermission === false) return <Text>No camera access</Text>;
+  // Progress animation
+  useEffect(() => {
+    if (isScanning && faces.length > 0) {
+      const newProgress = Math.min(100, scanProgress + 0.5);
+      setScanProgress(newProgress);
+    }
+  }, [faces]);
+
+  if (!hasPermission) {
+    return (
+      <View className="flex-1 bg-black justify-center items-center">
+        <Text className="text-white text-lg">Camera permission required</Text>
+      </View>
+    );
+  }
+
+  if (!device) {
+    return (
+      <View className="flex-1 bg-black justify-center items-center">
+        <Text className="text-white text-lg">Loading camera...</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-black">
       <Camera
-        ref={cameraRef}
-        style={StyleSheet.absoluteFill}
-        type={Camera.Constants.Type.front}
-        onFacesDetected={handleFacesDetected}
-        faceDetectorSettings={{
-          mode: FaceDetector.FaceDetectorMode.fast,
-          detectLandmarks: FaceDetector.FaceDetectorLandmarks.none,
-          minDetectionInterval: 100,
-        }}
-      >
-        {/* Overlay with circular mask */}
-        <View style={styles.overlay}>
-          <View style={[styles.circleOutline, { width: CIRCLE_SIZE, height: CIRCLE_SIZE }]}>
-            {/* Animated progress ring */}
-            <Svg width={CIRCLE_SIZE} height={CIRCLE_SIZE} style={styles.progressRing}>
-              <Circle
-                cx={CIRCLE_SIZE / 2}
-                cy={CIRCLE_SIZE / 2}
-                r={CIRCLE_SIZE / 2 - 5}
-                stroke={isComplete ? '#4CAF50' : '#6200EE'}
-                strokeWidth={4}
-                strokeDasharray={[2 * Math.PI * (CIRCLE_SIZE / 2 - 5)]}
-                strokeDashoffset={2 * Math.PI * (CIRCLE_SIZE / 2 - 5) * (1 - scanProgress / 100)}
-                fill="transparent"
-              />
-            </Svg>
+        ref={camera}
+        className="absolute inset-0"
+        device={device}
+        isActive={true}
+        photo={false}
+      />
 
-            {/* Face feedback */}
-            {faces.length > 0 && (
-              <View style={styles.faceFeedback}>
-                <Text style={styles.progressText}>{Math.round(scanProgress)}%</Text>
-              </View>
-            )}
+      {/* Circular overlay */}
+      <View className="absolute inset-0 justify-center items-center bg-black/50">
+        <View 
+          className="border-2 border-neutral-200/30 rounded-full justify-center items-center"
+          style={{ width: circleSize, height: circleSize }}
+        >
+          {/* Progress indicator - replace with your preferred animation */}
+          {isScanning && (
+            <View 
+              className="absolute border-2 border-blue-500 rounded-full"
+              style={{
+                width: circleSize * 0.9,
+                height: circleSize * 0.9,
+                transform: [{ rotate: `${scanProgress * 3.6}deg` }]
+              }}
+            />
+          )}
 
-            {/* Scan complete checkmark */}
-            {isComplete && (
-              <View style={styles.completeIndicator}>
-                <Text style={styles.completeText}>✓</Text>
-              </View>
-            )}
-          </View>
+          {/* Face detection feedback */}
+          {faces.length > 0 && (
+            <Text className="text-white text-xl font-bold">
+              {Math.round(scanProgress)}%
+            </Text>
+          )}
         </View>
-      </Camera>
+      </View>
 
       {/* Controls */}
-      <View style={styles.controls}>
-        {!isScanning && !isComplete ? (
-          <Button text="Start Scan" onPress={startScan} />
-        ) : isComplete ? (
-          <Button text="Done" onPress={() => console.log('Scan complete!')} />
+      <View className="absolute bottom-10 w-full items-center">
+        {!isScanning ? (
+          <Button 
+            title="Start Scan" 
+            onPress={() => setIsScanning(true)}
+            className="bg-blue-500 px-6 py-3 rounded-full"
+          />
         ) : (
-          <Button text="Cancel" onPress={resetScan} />
+          <Button 
+            title={scanProgress >= 100 ? "Continue" : "Cancel"} 
+            onPress={() => scanProgress >= 100 ? router.back() : setIsScanning(false)}
+            className={`px-6 py-3 rounded-full ${scanProgress >= 100 ? 'bg-green-500' : 'bg-red-500'}`}
+          />
         )}
       </View>
     </View>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-  },
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  circleOutline: {
-    borderRadius: 1000,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  progressRing: {
-    position: 'absolute',
-    transform: [{ rotate: '-90deg' }],
-  },
-  faceFeedback: {
-    position: 'absolute',
-  },
-  progressText: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  completeIndicator: {
-    position: 'absolute',
-    backgroundColor: '#4CAF50',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  completeText: {
-    color: 'white',
-    fontSize: 30,
-    fontWeight: 'bold',
-  },
-  controls: {
-    position: 'absolute',
-    bottom: 40,
-    width: '100%',
-    alignItems: 'center',
-  },
-});
+export default FaceScanScreen;
