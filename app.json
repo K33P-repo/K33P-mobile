@@ -13,6 +13,7 @@
       "bundleIdentifier": "com.deepurple.k33pmobil"
     },
     "android": {
+      "minSdkVersion": 26,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -45,10 +46,17 @@
             "../assets/fonts/Sora-Bold.ttf"
           ]
         }
-      ]
+      ],
+      "react-native-vision-camera"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ece5bfc9-764a-4732-a545-2ee6ec9a15e7"
+      }
     }
   }
 }

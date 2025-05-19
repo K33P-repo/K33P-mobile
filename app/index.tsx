@@ -29,7 +29,7 @@ export default function Index() {
       <View className="w-full absolute bottom-10 px-6 gap-y-4">
         <Button text="Login" onPress={() => router.push('/sign-in')} outline />
         <Button text="Create Account" onPress={() => router.push('/sign-up')} />
-        <Button text="Home" onPress={() => router.push('/sign-up/biometrics')} />
+        <Button text="Home" onPress={() => router.push('/sign-up/name')} />
       </View>
     </SafeAreaView>
   );
