@@ -7,6 +7,7 @@ type ButtonProps = {
   isDisabled?: boolean;
   outline?: boolean;
   isLoading?: boolean;
+  customColor?: string; // Add this new prop
 };
 
 export function Button({
@@ -15,6 +16,7 @@ export function Button({
   isDisabled = false,
   outline = false,
   isLoading = false,
+  customColor,
 }: ButtonProps) {
   // Base classes
   let buttonClasses = 'py-3 rounded-xl w-full items-center justify-center';
@@ -27,7 +29,8 @@ export function Button({
     buttonClasses += ' border border-main bg-transparent';
     textClasses += ' text-main';
   } else {
-    buttonClasses += ' bg-yellow-400';
+    // Use customColor if provided, otherwise default to bg-yellow-400
+    buttonClasses += customColor ? 'main' : ' bg-yellow-400';
     textClasses += ' text-neutral800';
   }
 
@@ -37,6 +40,7 @@ export function Button({
       onPress={onPress}
       disabled={isDisabled || isLoading}
       activeOpacity={0.7}
+      style={customColor ? { backgroundColor: customColor } : {}}
     >
       {isLoading ? (
         <ActivityIndicator color={outline ? '#EAB308' : '#000000'} />
