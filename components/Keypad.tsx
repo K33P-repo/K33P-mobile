@@ -17,10 +17,10 @@ const NumericKeypad: React.FC<NumericKeypadProps> = ({
 
   const KeyButton = ({ value }: { value: string }) => (
     <TouchableOpacity
-      className="flex-1 items-center justify-center h-16 mx"
+      className="flex-1 items-center justify-center h-16 mx font-sora-semibold"
       onPress={() => onKeyPress(value)}
     >
-      <Text className="text-3xl text-white">{value}</Text>
+      <Text className="text-3xl text-white font-sora-semibold">{value}</Text>
     </TouchableOpacity>
   );
 
