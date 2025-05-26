@@ -6,6 +6,7 @@ type ButtonProps = {
   onPress: () => void;
   isDisabled?: boolean;
   outline?: boolean;
+  danger?: boolean;
   isLoading?: boolean;
 };
 
@@ -14,6 +15,7 @@ export default function Button({
   onPress,
   isDisabled = false,
   outline = false,
+  danger = false,
   isLoading = false,
 }: ButtonProps) {
   // Base classes
@@ -23,6 +25,9 @@ export default function Button({
   if (isDisabled) {
     buttonClasses += ' bg-neutral300';
     textClasses += ' text-neutral50';
+  } else if (danger) {
+    buttonClasses += ' border border-error500/40 bg-transparent';
+    textClasses += ' text-error500';
   } else if (outline) {
     buttonClasses += ' border border-main bg-transparent';
     textClasses += ' text-main';
@@ -39,7 +44,11 @@ export default function Button({
       activeOpacity={0.7}
     >
       {isLoading ? (
-        <ActivityIndicator color={outline ? '#EAB308' : '#000000'} />
+        <ActivityIndicator color={
+          danger ? '#F44336' : 
+          outline ? '#EAB308' : 
+          '#000000'
+        } />
       ) : (
         <Text className={textClasses}>{text}</Text>
       )}

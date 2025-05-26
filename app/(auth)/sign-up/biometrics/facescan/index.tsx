@@ -1,141 +1,134 @@
 import Button from '@/components/Button';
+import NumericKeypad from '@/components/Keypad';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Image, Text, View } from 'react-native';
-import FaceScan0 from '../../../../../assets/images/facescan-0.png';
-import FaceScan30 from '../../../../../assets/images/facescan-1.png';
-import FaceScan70 from '../../../../../assets/images/facescan-2.png';
-import FaceScan100 from '../../../../../assets/images/facescan-3.png';
-import FaceSuccessImage from '../../../../../assets/images/facesuccess.png';
+import React, { useRef, useState } from 'react';
+import { Image, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import BackButton from '../../../../../assets/images/back.png';
+import CenterImage from '../../../../../assets/images/face-id.png';
+import Icon2 from '../../../../../assets/images/FaceMask.png';
 import LockIcon from '../../../../../assets/images/lock-3.png';
-import LockSuccessIcon from '../../../../../assets/images/lock-4.png'; // Updated lock icon
+import Icon1 from '../../../../../assets/images/Sun.png';
 
-const FaceScanScreen = () => {
+export default function FaceScan() {
   const router = useRouter();
-  const [progress, setProgress] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
-  const [currentFaceImage, setCurrentFaceImage] = useState(FaceScan0);
+  const [otp, setOtp] = useState(['', '', '', '', '']);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isValid, setIsValid] = useState(false);
+  const [showKeypad, setShowKeypad] = useState(false);
+  const otpInputs = useRef<(TextInput | null)[]>([]);
 
-  // Progress steps with corresponding images
-  const progressSteps = [
-    { percent: 0, image: FaceScan0, text: "Keep your face in the center until the registration is complete" },
-    { percent: 30, image: FaceScan30, text: "Keep your face in the center until the registration is complete" },
-    { percent: 70, image: FaceScan70, text: "Keep your face in the center until the registration is complete" },
-    { percent: 100, image: FaceScan100, text: "Scan complete" }
-  ];
+  const handleKeyPress = (num: string) => {
+    if (currentIndex < 5) {
+      const newOtp = [...otp];
+      newOtp[currentIndex] = num;
+      setOtp(newOtp);
+      
+      if (currentIndex < 4) {
+        setCurrentIndex(currentIndex + 1);
+        otpInputs.current[currentIndex + 1]?.focus();
+      }
+    }
+  };
 
-  const currentStep = progressSteps.find(step => step.percent === progress) || progressSteps[0];
+  const handleBackspace = () => {
+    if (currentIndex > 0 && otp[currentIndex] === '') {
+      const newOtp = [...otp];
+      newOtp[currentIndex - 1] = '';
+      setOtp(newOtp);
+      setCurrentIndex(currentIndex - 1);
+      otpInputs.current[currentIndex - 1]?.focus();
+    } else if (otp[currentIndex] !== '') {
+      const newOtp = [...otp];
+      newOtp[currentIndex] = '';
+      setOtp(newOtp);
+    }
+  };
 
   const handleProceed = () => {
-    // Navigate back to biometrics with completion status
-    router.push({
-      pathname: '/sign-up/biometrics',
-      params: { faceScanCompleted: 'true' }
-    });
+      router.push('/sign-up/biometrics/facesetup');
   };
-  // Simulate progress with discrete jumps
-  useEffect(() => {
-    if (isComplete) return;
 
-    const timer = setInterval(() => {
-      setProgress(prev => {
-        const nextStep = progressSteps.find(step => step.percent > prev);
-        
-        if (!nextStep) {
-          clearInterval(timer);
-          setIsComplete(true);
-          return 100;
-        }
-        
-        setCurrentFaceImage(nextStep.image);
-        return nextStep.percent;
-      });
-    }, 2000); // Change every 2 seconds
-
-    return () => clearInterval(timer);
-  }, [isComplete]);
-
-  if (isComplete) {
-    return (
-      <View className="flex-1 bg-mainBlack px-5 pt-16">
-        {/* Header - Using lock-4 icon */}
-        <View className="relative flex-row items-center justify-start mb-16">
+  return (
+    <TouchableWithoutFeedback onPress={() => setShowKeypad(false)}>
+      <View className="flex-1 bg-neutral800 px-5 pt-12">
+        {/* Header */}
+        <View className="relative flex-row items-center justify-start mb-4">
+          <TouchableOpacity className="z-10" onPress={() => router.back()}>
+            <Image source={BackButton} className="w-10 h-10" resizeMode="contain" />
+          </TouchableOpacity>
           <Image
-            source={LockSuccessIcon}
+            source={LockIcon}
             className="absolute left-1/2 transform -translate-x-1/2 w-[88px] h-[16px]"
             resizeMode="contain"
           />
         </View>
 
-        {/* Success Image */}
-        <View className="items-center my-8">
+        {/* Centered Image */}
+        <View className="items-center mb-8">
           <Image 
-            source={FaceSuccessImage} 
-            className="mb-6" 
+            source={CenterImage} 
+            className="mt-16 " 
             resizeMode="contain" 
           />
         </View>
 
-        {/* Success Text */}
-        <View className="items-center mb-2">
-          <Text className="text-neutral100 font-sora text-sm text-center p-8">
-          Your Face I.D has been successfully registered
-          </Text>
+        {/* Icon-Text Pairs with proper text wrapping */}
+        <View className="mb-8 px-2">
+          {/* First Icon-Text Pair */}
+          <View className="flex-row mb-6">
+            <View className="mr-4 mt-1">
+              <Image 
+                source={Icon1} 
+                className="w-6 h-6" 
+                resizeMode="contain" 
+              />
+            </View>
+            <View className="flex-1">
+              <Text className="text-white font-sora text-sm flex-wrap" numberOfLines={3}>
+                Enroll face in the day time or in a well-lighted environment
+              </Text>
+            </View>
+          </View>
+
+          {/* Second Icon-Text Pair */}
+          <View className="flex-row">
+            <View className="mr-4 mt-1">
+              <Image 
+                source={Icon2} 
+                className="w-6 h-6" 
+                resizeMode="contain" 
+              />
+            </View>
+            <View className="flex-1">
+              <Text className="text-white font-sora text-sm flex-wrap" numberOfLines={3}>
+                Do not wear any object like mask or glasses that will cover the face
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* Progress Percentage */}
-        <View className="items-center mb-8">
-          <Text className="text-white font-sora-bold text-2xl">
-            100%
-          </Text>
-        </View>
-
-        {/* Bottom Button */}
+        {/* Proceed Button at Bottom */}
         <View className="flex-1 justify-end pb-8">
           <Button
             text="Proceed"
             onPress={handleProceed}
           />
         </View>
-      </View>
-    );
-  }
 
-  return (
-    <View className="flex-1 bg-neutral800 px-5 pt-12">
-      {/* Header */}
-      <View className="relative flex-row items-center justify-start mb-4">
-        <Image
-          source={LockIcon}
-          className="absolute left-1/2 transform -translate-x-1/2 w-[88px] h-[16px]"
-          resizeMode="contain"
+        {/* Dismiss Keypad Overlay */}
+        {showKeypad && (
+          <TouchableWithoutFeedback onPress={() => setShowKeypad(false)}>
+            <View className="absolute top-0 left-0 right-0 bottom-80 bg-transparent" />
+          </TouchableWithoutFeedback>
+        )}
+
+        {/* Custom Numeric Keypad */}
+        <NumericKeypad
+          onKeyPress={handleKeyPress}
+          onBackspace={handleBackspace}
+          isVisible={showKeypad}
         />
       </View>
-
-      {/* Face Scan Image */}
-      <View className="items-center my-8">
-        <Image 
-          source={currentFaceImage} 
-          className="mb-10" 
-          resizeMode="contain" 
-        />
-      </View>
-
-      {/* Instruction Text (changes with progress) */}
-      <View className="items-center mb-2">
-        <Text className="text-neutral100 font-sora text-sm text-center px-7">
-          {currentStep.text}
-        </Text>
-      </View>
-
-      {/* Progress Percentage */}
-      <View className="items-center mt-8">
-      <Text className="text-white font-sora-bold text-2xl">
-      {progress}%
-        </Text>
-      </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
-};
-
-export default FaceScanScreen;
+}

@@ -1,20 +1,21 @@
+import Button from '@/components/Button'
 import { useRouter } from 'expo-router'
 import React, { useRef, useState } from 'react'
 import {
   Dimensions,
   FlatList,
   Image,
+  Modal,
+  Pressable,
   Text,
   TouchableOpacity,
   View
 } from 'react-native'
-
 import SlideImg3, { default as SlideImg1, default as SlideImg2 } from '../../assets/images/carouselImage.png'
 import TopLeft from '../../assets/images/info.png'
 import ArrowLeft from '../../assets/images/left.png'
 import TopRight from '../../assets/images/person.png'
 import ArrowRight from '../../assets/images/right.png'
-import Button from '@/components/Button'
 
 const { width: screenWidth } = Dimensions.get('window')
 
@@ -44,6 +45,7 @@ const ITEM_SPACING = screenWidth * 0.05 // peek size on the right
 
 export default function Index() {
   const [current, setCurrent] = useState(0)
+  const [modalVisible, setModalVisible] = useState(false)
   const router = useRouter()
   const flatListRef = useRef(null)
 
@@ -65,7 +67,11 @@ export default function Index() {
   }
 
   const openModal = () => {
-    console.log('Sign In pressed')
+    setModalVisible(true)
+  }
+
+  const closeModal = () => {
+    setModalVisible(false)
   }
 
   const renderItem = ({ item, index }) => {
@@ -74,9 +80,9 @@ export default function Index() {
         style={{
           width: ITEM_WIDTH,
           marginRight: ITEM_SPACING,
-          backgroundColor: '#121212', // bg-mainBlack
+          backgroundColor: '#121212',
           borderRadius: 12,
-          padding: 8 ,
+          padding: 8,
           flexDirection: 'row',
           alignItems: 'center',
           opacity: index === current ? 1 : 0.6,
@@ -90,7 +96,7 @@ export default function Index() {
         <View style={{ flex: 1 }}>
           <Text
             style={{
-              color: '#B0B0B0', 
+              color: '#B0B0B0',
               fontSize: 12,
               marginBottom: 4,
               fontFamily: 'Sora-Regular',
@@ -137,7 +143,7 @@ export default function Index() {
           contentContainerStyle={{ paddingLeft: 20 }}
           onViewableItemsChanged={onViewRef.current}
           viewabilityConfig={viewConfigRef.current}
-          pagingEnabled={false} // paging false because of peeking
+          pagingEnabled={false}
         />
 
         {/* Arrows & Dots */}
@@ -171,6 +177,46 @@ export default function Index() {
 
         <Button text="Add New Wallet" onPress={openModal} />
       </View>
+
+      {/* Add Wallet Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={closeModal}
+      >
+        <Pressable 
+          onPress={closeModal}
+          className="absolute inset-0 bg-black/60"
+        />
+        
+        <View className="flex-1 justify-center items-center">
+          <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
+            <Text className="text-white font-sora text-sm text-center mb-6">
+              How do you want to add wallet
+            </Text>
+            
+            <View className="space-y-4 gap-4">
+              <Button 
+                text="Scan Device" 
+                onPress={() => {
+                  closeModal();
+                  router.push('/search'); 
+                }}
+              />
+              
+              <Button 
+                text="Add Manually" 
+                onPress={() => {
+                  closeModal();
+                  router.push('/add-manually');
+                }}
+                outline
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }

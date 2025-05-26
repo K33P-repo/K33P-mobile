@@ -7,6 +7,8 @@ export default function useCustomFonts() {
     'Sora-Regular': require('../assets/fonts/Sora-Regular.ttf'),
     'Sora-SemiBold': require('../assets/fonts/Sora-SemiBold.ttf'),
     'Sora-Bold': require('../assets/fonts/Sora-Bold.ttf'),
+    'Space-Mono': require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'Space-Mono-Bold': require('../assets/fonts/SpaceMono-Bold.ttf'),
   });
 
   const onLayoutRootView = useCallback(async () => {
