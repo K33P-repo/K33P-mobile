@@ -1,6 +1,7 @@
+// screens/wallet-folders.tsx
 import Button from '@/components/Button';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   Modal,
@@ -17,6 +18,7 @@ import TopRight from '../../../assets/images/person.png';
 interface Wallet {
   id: string;
   name: string;
+  keyType?: '12' | '24';
 }
 
 export default function Index() {
@@ -25,9 +27,37 @@ export default function Index() {
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [wallets, setWallets] = useState<Wallet[]>(
-    params.wallets ? JSON.parse(params.wallets as string) : []
-  );
+  
+  // Initialize wallets state from params or local storage
+  const [wallets, setWallets] = useState<Wallet[]>(() => {
+    try {
+      // Try to get from navigation params first
+      if (params.wallets) {
+        return JSON.parse(params.wallets as string);
+      }
+      // Fallback to empty array
+      return [];
+    } catch (e) {
+      console.error('Error parsing wallets:', e);
+      return [];
+    }
+  });
+
+  // Update wallets when params change (coming back from AddKey screen)
+  useEffect(() => {
+    if (params.updatedWallet) {
+      try {
+        const updatedWallet = JSON.parse(params.updatedWallet as string);
+        setWallets(prevWallets => 
+          prevWallets.map(w => 
+            w.id === updatedWallet.id ? updatedWallet : w
+          )
+        );
+      } catch (e) {
+        console.error('Error parsing updated wallet:', e);
+      }
+    }
+  }, [params.updatedWallet]);
 
   const openAddWalletModal = () => {
     setAddWalletModalVisible(true);
@@ -58,7 +88,6 @@ export default function Index() {
 
   const handleRemoveWallet = () => {
     if (selectedWallet) {
-      // Filter out the selected wallet
       const updatedWallets = wallets.filter(w => w.id !== selectedWallet.id);
       setWallets(updatedWallets);
       closeWalletActionModal();
@@ -99,7 +128,7 @@ export default function Index() {
                         resizeMode="contain" 
                       />
                       <Text className="text-white font-sora text-base text-center mb-1 mt-5">
-                        Add Key Phrases
+                        {wallet.keyType ? `${wallet.keyType} Keys` : 'Add Key Phrases'}
                       </Text>
                       <Text className="text-neutral100 font-sora text-sm text-center">
                         {wallet.name}
@@ -107,7 +136,6 @@ export default function Index() {
                     </View>
                   </TouchableOpacity>
                 ))}
-                {/* Add empty view if odd number of wallets to maintain grid */}
                 {row.length === 1 && <View className="w-1/2 px-2" />}
               </View>
             ))}
@@ -183,24 +211,21 @@ export default function Index() {
         
         <View className="flex-1 justify-center items-center">
           <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
-           {/*  <Text className="text-white font-sora text-sm text-center mb-6">
-              {selectedWallet?.name} Actions
-            </Text> */}
-            
             <View className="space-y-4 gap-4">
-            <Button 
-  text="Add Key Phrases" 
-  onPress={() => {
-    closeWalletActionModal();
-    router.push({
-      pathname: "/(home)/add-key-phrases",
-      params: { 
-        walletName: selectedWallet?.name  
-      }
-    });
-  }}
-/>
-
+              <Button 
+                text={selectedWallet?.keyType ? 'View Key Phrases' : 'Add Key Phrases'} 
+                onPress={() => {
+                  closeWalletActionModal();
+                  router.push({
+                    pathname: "/(home)/add-key-phrases",
+                    params: { 
+                      walletId: selectedWallet?.id,
+                      walletName: selectedWallet?.name,
+                      wallets: JSON.stringify(wallets)
+                    }
+                  });
+                }}
+              />
               
               <Button 
                 text="Remove Wallet" 

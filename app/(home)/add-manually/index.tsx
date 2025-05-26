@@ -239,7 +239,7 @@ export default function AddManually() {
                     filteredWallets.map(wallet => (
                       <TouchableOpacity
                         key={wallet.id}
-                        className="flex-row justify-between items-center py-3 border-b border-neutral700"
+                        className="flex-row justify-between items-center py-3"
                         onPress={() => handleWalletSelect(wallet)}
                       >
                         <Text className="text-white font-sora text-base">{wallet.name}</Text>
@@ -317,10 +317,10 @@ export default function AddManually() {
           {(selectedWallets.length > 0 || (isSearching && searchQuery !== '')) && (
             <View className="pb-6">
               <Button
-              text="Proceed"
-              onPress={handleProceed}
-              isDisabled={selectedWallets.length === 0}
-            />
+          text="Proceed"
+          onPress={handleProceed}
+          isDisabled={selectedWallets.length === 0}
+        />
             </View>
           )}
         </View>

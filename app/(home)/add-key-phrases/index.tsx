@@ -1,5 +1,6 @@
+// components/AddKey.tsx
 import Button from '@/components/Button';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Image,
@@ -19,6 +20,7 @@ import ArrowRight from '../../../assets/images/right.png';
 
 export default function AddKey() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [selectedKeyType, setSelectedKeyType] = useState<'12' | '24'>('12');
   const [phrases, setPhrases] = useState<string[]>(Array(24).fill(''));
   const [focusedInput, setFocusedInput] = useState<number | null>(null);
@@ -77,7 +79,6 @@ export default function AddKey() {
 
   const [start, end] = getStartEndIndex();
 
-  // Check if all required phrases are filled
   const allPhrasesFilled = selectedKeyType === '12' 
     ? phrases.slice(0, 12).every(p => p.trim())
     : phrases.every(p => p.trim());
@@ -191,7 +192,16 @@ export default function AddKey() {
         <View className="pb-8">
           <Button
             text="Done"
-            onPress={() => router.push('/(home)')}
+            onPress={() => router.push({
+              pathname: '/(home)/add-to-wallet',
+              params: { 
+                updatedWallet: JSON.stringify({
+                  id: params.walletId,
+                  name: params.walletName,
+                  keyType: selectedKeyType
+                })
+              }
+            })}
             isDisabled={!allPhrasesFilled}
           />
         </View>

@@ -11,7 +11,9 @@ import {
   TouchableOpacity,
   View
 } from 'react-native'
-import SlideImg3, { default as SlideImg1, default as SlideImg2 } from '../../assets/images/carouselImage.png'
+import SlideImg1 from '../../assets/images/carouselImage.png'
+import SlideImg3 from '../../assets/images/carouselImage2.png'
+import SlideImg2 from '../../assets/images/carouselImage3.png'
 import TopLeft from '../../assets/images/info.png'
 import ArrowLeft from '../../assets/images/left.png'
 import TopRight from '../../assets/images/person.png'
@@ -29,19 +31,19 @@ const slides = [
   {
     id: 2,
     image: SlideImg2,
-    label: 'FAST',
-    headline: 'Instant transactions',
+    label: 'Why K33P?',
+    headline: 'Lifetime access to key phrases + NOK Setup.',
   },
   {
     id: 3,
     image: SlideImg3,
-    label: 'EASY',
-    headline: 'Just a tap away',
+    label: 'How to get started with K33P?',
+    headline: 'Deposit 2ADA, Create DID, Take back your 2ADA.',
   },
 ]
 
 const ITEM_WIDTH = screenWidth * 0.85
-const ITEM_SPACING = screenWidth * 0.05 // peek size on the right
+const ITEM_SPACING = screenWidth * 0.05 
 
 export default function Index() {
   const [current, setCurrent] = useState(0)
