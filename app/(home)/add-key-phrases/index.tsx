@@ -1,254 +1,201 @@
 import Button from '@/components/Button';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react'; // Added useEffect
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
   Image,
-  Modal,
-  Pressable,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View
 } from 'react-native';
-import FolderIcon from '../../../assets/images/folder.png';
-import TopLeft from '../../../assets/images/info.png';
-import TopRight from '../../../assets/images/person.png';
+import BackButton from '../../../assets/images/back.png';
+import ArrowLeft from '../../../assets/images/left.png';
+import ArrowRight from '../../../assets/images/right.png';
 
-interface Wallet {
-  id: string;
-  name: string;
-  // Add an optional property to store the key type
-  keyType?: '12 Keys' | '24 Keys';
-}
-
-export default function Index() {
-  const [addWalletModalVisible, setAddWalletModalVisible] = useState(false);
-  const [walletActionModalVisible, setWalletActionModalVisible] = useState(false);
-  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
+export default function AddKey() {
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const [selectedKeyType, setSelectedKeyType] = useState<'12' | '24'>('12');
+  const [phrases, setPhrases] = useState<string[]>(Array(24).fill(''));
+  const [focusedInput, setFocusedInput] = useState<number | null>(null);
+  const [page, setPage] = useState<1 | 2>(1);
 
-  // Initialize wallets from params or an empty array
-  const [wallets, setWallets] = useState<Wallet[]>(
-    params.wallets ? JSON.parse(params.wallets as string) : []
-  );
+  const totalPages = selectedKeyType === '12' ? 1 : 2;
+  const isFirstPage = page === 1;
+  const isLastPage = page === totalPages;
 
-  // Use useEffect to listen for changes in params and update wallets
-  useEffect(() => {
-    // Check if addedKeyType and walletName (or ID) are present in params
-    if (params.addedKeyType && params.walletName) {
-      const { addedKeyType, walletName } = params;
+  const handlePhraseChange = (text: string, index: number) => {
+    const newPhrases = [...phrases];
+    newPhrases[index] = text;
+    setPhrases(newPhrases);
+  };
 
-      setWallets(prevWallets => {
-        // Find the wallet that matches the name (or ideally, an ID)
-        return prevWallets.map(wallet => {
-          if (wallet.name === walletName) { // Consider using wallet.id for robustness
-            return { ...wallet, keyType: `${addedKeyType} Keys` as '12 Keys' | '24 Keys' };
-          }
-          return wallet;
-        });
-      });
-      // Clear the params to prevent re-applying the update on subsequent renders
-      // This is a common pattern for "one-time" param consumption
-      router.setParams({ addedKeyType: undefined, walletName: undefined });
+  const renderPhraseInputs = (start: number, end: number) => {
+    const inputs = [];
+    for (let i = start; i < end; i += 2) {
+      inputs.push(
+        <View key={`row-${i}`} className="flex-row justify-center mb-6">
+          {[i, i + 1].map((index) => (
+            <TextInput
+              key={`phrase-${index}`}
+              className={`w-[45%] h-14 rounded-lg p-4 mx-2 text-center font-sora ${
+                focusedInput === index || phrases[index]
+                  ? 'bg-white text-black'
+                  : 'bg-neutral300 text-neutral50'
+              }`}
+              placeholder={`Phrase ${index + 1}`}
+              placeholderTextColor="#B0B0B0"
+              value={phrases[index]}
+              onChangeText={(text) => handlePhraseChange(text, index)}
+              onFocus={() => setFocusedInput(index)}
+              onBlur={() => setFocusedInput(null)}
+              keyboardAppearance="dark"
+            />
+          ))}
+        </View>
+      );
     }
-    // Also, if 'wallets' param changes (e.g., from AddManually page), update the state
-    if (params.wallets) {
-      setWallets(JSON.parse(params.wallets as string));
-      router.setParams({ wallets: undefined }); // Clear to prevent loops
-    }
-  }, [params, router]); // Dependency array includes params and router
-
-  const openAddWalletModal = () => {
-    setAddWalletModalVisible(true);
+    return inputs;
   };
 
-  const closeAddWalletModal = () => {
-    setAddWalletModalVisible(false);
+  const goToPrevPage = () => {
+    if (page > 1) setPage(page - 1);
   };
 
-  const openWalletActionModal = (wallet: Wallet) => {
-    setSelectedWallet(wallet);
-    setWalletActionModalVisible(true);
+  const goToNextPage = () => {
+    if (page < totalPages) setPage(page + 1);
   };
 
-  const closeWalletActionModal = () => {
-    setWalletActionModalVisible(false);
-    setSelectedWallet(null);
+  const getStartEndIndex = () => {
+    if (selectedKeyType === '12') return [0, 12];
+    return page === 1 ? [0, 12] : [12, 24];
   };
 
-  const handleAddNewWallet = () => {
-    router.push({
-      pathname: '/add-manually',
-      params: {
-        wallets: JSON.stringify(wallets)
-      }
-    });
-  };
+  const [start, end] = getStartEndIndex();
 
-  const handleRemoveWallet = () => {
-    if (selectedWallet) {
-      const updatedWallets = wallets.filter(w => w.id !== selectedWallet.id);
-      setWallets(updatedWallets);
-      closeWalletActionModal();
-    }
-  };
-
-  // Group wallets into rows of 2 for the grid
-  const walletRows = [];
-  for (let i = 0; i < wallets.length; i += 2) {
-    walletRows.push(wallets.slice(i, i + 2));
-  }
+  // Check if all required phrases are filled
+  const allPhrasesFilled = selectedKeyType === '12' 
+    ? phrases.slice(0, 12).every(p => p.trim())
+    : phrases.every(p => p.trim());
 
   return (
-    <View className="flex-1 bg-neutral800 px-4 pt-6 pb-12 relative">
-      {/* Top Icons */}
-      <View className="absolute top-10 left-4">
-        <Image source={TopLeft} className="w-10 h-10" resizeMode="contain" />
-      </View>
-      <View className="absolute top-10 right-4">
-        <Image source={TopRight} className="w-10 h-10" resizeMode="contain" />
-      </View>
-
-      {/* Middle Content - Wallet Folders Grid */}
-      <View className="flex-1 justify-center mt-24">
-        {wallets.length > 0 ? (
-          <ScrollView contentContainerStyle={{ paddingVertical: 20 }}>
-            {walletRows.map((row, rowIndex) => (
-              <View key={`row-${rowIndex}`} className="flex-row justify-around mb-8">
-                {row.map((wallet) => (
-                  <TouchableOpacity
-                    key={wallet.id}
-                    onPress={() => openWalletActionModal(wallet)}
-                    className="items-center w-1/2 px-2"
-                  >
-                    <View className="items-center">
-                      <Image
-                        source={FolderIcon}
-                        resizeMode="contain"
-                      />
-                      <Text className="text-white font-sora text-base text-center mb-1 mt-5">
-                        {/* Display keyType if available, otherwise "Add Key Phrases" */}
-                        {wallet.keyType || "Add Key Phrases"}
-                      </Text>
-                      <Text className="text-neutral100 font-sora text-sm text-center">
-                        {wallet.name}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-                {/* Add empty view if odd number of wallets to maintain grid */}
-                {row.length === 1 && <View className="w-1/2 px-2" />}
-              </View>
-            ))}
-          </ScrollView>
-        ) : (
-          <View className="items-center justify-center">
-            <Text className="text-white font-sora-semibold text-lg text-center mb-4">
-              No wallets selected yet
-            </Text>
-            <Text className="text-neutral400 font-sora text-sm text-center">
-              Add wallets to get started
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Add Wallet Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={addWalletModalVisible}
-        onRequestClose={closeAddWalletModal}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1 bg-neutral800 px-5 pt-12"
       >
-        <Pressable
-          onPress={closeAddWalletModal}
-          className="absolute inset-0 bg-black/70"
-        />
-
-        <View className="flex-1 justify-center items-center">
-          <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
-            <Text className="text-white font-sora text-sm text-center mb-6">
-              How do you want to add wallet
-            </Text>
-
-            <View className="space-y-4 gap-4">
-              <Button
-                text="Scan Device"
-                onPress={() => {
-                  closeAddWalletModal();
-                  router.push('/search');
-                }}
-              />
-
-              <Button
-                text="Add Manually"
-                onPress={() => {
-                  closeAddWalletModal();
-                  router.push({
-                    pathname: '/add-manually',
-                    params: {
-                      wallets: JSON.stringify(wallets)
-                    }
-                  });
-                }}
-                outline
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Wallet Action Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={walletActionModalVisible}
-        onRequestClose={closeWalletActionModal}
-      >
-        <Pressable
-          onPress={closeWalletActionModal}
-          className="absolute inset-0 bg-black/80"
-        />
-
-        <View className="flex-1 justify-center items-center">
-          <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
-            <View className="space-y-4 gap-4">
-            <Button
-              text="Add Key Phrases"
-              onPress={() => {
-                closeWalletActionModal();
-                router.push({
-                  pathname: "/(home)/add-key-phrases",
-                  params: {
-                    walletName: selectedWallet?.name, // Pass the wallet's name
-                    walletId: selectedWallet?.id,     // Pass the wallet's ID for robust identification
-                  }
-                });
-              }}
+        {/* Header */}
+        <View className="relative flex-row items-center justify-start mb-6">
+          <TouchableOpacity className="z-10" onPress={() => router.back()}>
+            <Image
+              source={BackButton}
+              className="w-10 h-10"
+              resizeMode="contain"
             />
+          </TouchableOpacity>
+        </View>
 
-              <Button
-                text="Remove Wallet"
-                onPress={handleRemoveWallet}
-                danger
-              />
-            </View>
+        {/* Key Type Selector */}
+        <View className="flex-row mb-8 mt-3">
+          <TouchableOpacity
+            className={`flex-1 py-3 rounded-xl ${
+              selectedKeyType === '12' ? 'bg-white' : ''
+            }`}
+            onPress={() => {
+              setSelectedKeyType('12');
+              setPage(1);
+            }}
+          >
+            <Text
+              className={`text-center font-sora ${
+                selectedKeyType === '12'
+                  ? 'text-black font-sora-semibold'
+                  : 'text-neutral200'
+              }`}
+            >
+              12 Keys
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className={`flex-1 py-3 rounded-xl ${
+              selectedKeyType === '24' ? 'bg-white' : ''
+            }`}
+            onPress={() => {
+              setSelectedKeyType('24');
+              setPage(1);
+            }}
+          >
+            <Text
+              className={`text-center font-sora ${
+                selectedKeyType === '24'
+                  ? 'text-black font-sora-semibold'
+                  : 'text-neutral200'
+              }`}
+            >
+              24 Keys
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Phrase Inputs */}
+        <ScrollView className="my-5">
+          <View className="bg-white/10 rounded-xl pt-4">
+            {renderPhraseInputs(start, end)}
           </View>
-        </View>
-      </Modal>
+          
+          {/* Navigation Controls */}
+          {selectedKeyType === '24' && (
+            <View className="flex-row items-center justify-between mt-10 px-4">
+              <TouchableOpacity 
+                onPress={goToPrevPage}
+                disabled={isFirstPage}
+              >
+                <Image 
+                  source={ArrowLeft} 
+                  style={{ opacity: isFirstPage ? 0.5 : 1 }}
+                />
+              </TouchableOpacity>
 
-      {/* Bottom Buttons */}
-      <View className="bg-mainBlack px-4 py-8 rounded-3xl space-y-4">
-        <View className="items-center mb-4">
-          <Text className="text-white font-sora-semibold text-sm">Connect Wallet</Text>
-        </View>
+              <View className="flex-row gap-3 items-center">
+                {[...Array(totalPages)].map((_, index) => (
+                  <View
+                    key={index}
+                    className={`rounded-full ${
+                      page === index + 1
+                        ? 'bg-white w-4 h-2'
+                        : 'bg-neutral100 w-2 h-2'
+                    }`}
+                  />
+                ))}
+              </View>
 
-        <Button
-          text={wallets.length > 0 ? "Add Another Wallet" : "Add New Wallet"}
-          onPress={openAddWalletModal}
-        />
-      </View>
-    </View>
+              <TouchableOpacity 
+                onPress={goToNextPage}
+                disabled={isLastPage}
+              >
+                <Image 
+                  source={ArrowRight} 
+                  style={{ opacity: isLastPage ? 0.5 : 1 }}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Continue Button */}
+        <View className="pb-8">
+          <Button
+            text="Done"
+            onPress={() => router.push('/(home)')}
+            isDisabled={!allPhrasesFilled}
+          />
+        </View>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 }
