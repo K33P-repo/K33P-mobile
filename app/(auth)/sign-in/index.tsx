@@ -10,12 +10,12 @@ import LockIcon from '../../../assets/images/lock-4.png';
 export default function PhoneEntryScreen() {
   const router = useRouter();
   const {
-    rawPhoneNumber,
-    formattedPhoneNumber,
-    setRawPhoneNumber,
-    setFormattedPhoneNumber,
+    phoneNumber, 
+    formattedNumber, 
+    setPhoneNumber, 
+    setFormattedNumber, 
   } = usePhoneStore();
-  
+
   const [isValid, setIsValid] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
   const [showKeypad, setShowKeypad] = useState(false);
@@ -23,51 +23,51 @@ export default function PhoneEntryScreen() {
 
   // Format phone number as +xxx-xxx-xxxx-xxx
   useEffect(() => {
-    if (rawPhoneNumber.length > 0) {
+    if (phoneNumber.length > 0) {
       let formatted = '+';
-      if (rawPhoneNumber.length > 0) {
-        formatted += rawPhoneNumber.substring(0, 3);
+      if (phoneNumber.length > 0) {
+        formatted += phoneNumber.substring(0, 3);
       }
-      if (rawPhoneNumber.length > 3) {
-        formatted += '-' + rawPhoneNumber.substring(3, 6);
+      if (phoneNumber.length > 3) {
+        formatted += '-' + phoneNumber.substring(3, 6);
       }
-      if (rawPhoneNumber.length > 6) {
-        formatted += '-' + rawPhoneNumber.substring(6, 10);
+      if (phoneNumber.length > 6) {
+        formatted += '-' + phoneNumber.substring(6, 10);
       }
-      if (rawPhoneNumber.length > 10) {
-        formatted += '-' + rawPhoneNumber.substring(10, 13);
+      if (phoneNumber.length > 10) {
+        formatted += '-' + phoneNumber.substring(10, 13);
       }
-      setFormattedPhoneNumber(formatted);
+      setFormattedNumber(formatted);
     } else {
-      setFormattedPhoneNumber('');
+      setFormattedNumber('');
     }
-  }, [rawPhoneNumber, setFormattedPhoneNumber]);
+  }, [phoneNumber, setFormattedNumber]); // Dependency changed from rawPhoneNumber
 
   const handlePhoneChange = (text: string) => {
     const cleanedNumber = text.replace(/\D/g, '');
-    setRawPhoneNumber(cleanedNumber);
+    setPhoneNumber(cleanedNumber); // Changed from setRawPhoneNumber
     setIsValid(cleanedNumber.length === 13);
     setIsTouched(true);
   };
 
   const handleKeyPress = (num: string) => {
-    const newNumber = rawPhoneNumber + num;
+    const newNumber = phoneNumber + num; // Changed from rawPhoneNumber
     if (newNumber.length <= 13) {
-      setRawPhoneNumber(newNumber);
+      setPhoneNumber(newNumber); // Changed from setRawPhoneNumber
       setIsValid(newNumber.length === 13);
       setIsTouched(true);
     }
   };
 
   const handleBackspace = () => {
-    const newNumber = rawPhoneNumber.slice(0, -1);
-    setRawPhoneNumber(newNumber);
+    const newNumber = phoneNumber.slice(0, -1); // Changed from rawPhoneNumber
+    setPhoneNumber(newNumber); // Changed from setRawPhoneNumber
     setIsValid(newNumber.length === 13);
     setIsTouched(true);
   };
 
   const handleProceed = () => {
-    console.log('Entered phone number:', formattedPhoneNumber);
+    console.log('Entered phone number:', formattedNumber); // Changed from formattedPhoneNumber
     router.push('/sign-in/otp');
   };
 
@@ -76,8 +76,8 @@ export default function PhoneEntryScreen() {
     router.push('/sign-in-nok');
   };
 
-  const showError = isTouched && !isValid && rawPhoneNumber.length > 0;
-  const showNOKButton = !showKeypad && rawPhoneNumber.length === 0;
+  const showError = isTouched && !isValid && phoneNumber.length > 0; // Changed from rawPhoneNumber
+  const showNOKButton = !showKeypad && phoneNumber.length === 0; // Changed from rawPhoneNumber
 
   return (
     <View className="flex-1 bg-neutral800 px-5 pt-12">
@@ -117,7 +117,7 @@ export default function PhoneEntryScreen() {
               placeholder="+234-801-2345-678"
               placeholderTextColor="#969696"
               keyboardType="phone-pad"
-              value={formattedPhoneNumber}
+              value={formattedNumber} // Changed from formattedPhoneNumber
               onChangeText={handlePhoneChange}
               maxLength={18}
               showSoftInputOnFocus={false}
@@ -143,7 +143,7 @@ export default function PhoneEntryScreen() {
           onPress={handleProceed}
           isDisabled={!isValid}
         />
-        
+
         {showNOKButton && (
           <View className='mt-5'>
             <Button

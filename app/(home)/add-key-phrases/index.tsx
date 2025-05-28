@@ -1,11 +1,11 @@
-// components/AddKey.tsx
 import Button from '@/components/Button';
 import { usePhoneStore } from '@/store/usePhoneStore';
 import { useVaultStore } from '@/store/useVaultStore';
 import { encryptPhrases } from '@/utils/crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react'; // Import useEffect
 import {
+  Alert,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -20,6 +20,7 @@ import {
 import BackButton from '../../../assets/images/back.png';
 import ArrowLeft from '../../../assets/images/left.png';
 import ArrowRight from '../../../assets/images/right.png';
+
 export default function AddKey() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -28,11 +29,28 @@ export default function AddKey() {
   const [focusedInput, setFocusedInput] = useState<number | null>(null);
   const [page, setPage] = useState<1 | 2>(1);
 
-  const { phoneNumber } = usePhoneStore()
+  const { phoneNumber } = usePhoneStore(); // Destructure phoneNumber
 
   const totalPages = selectedKeyType === '12' ? 1 : 2;
   const isFirstPage = page === 1;
   const isLastPage = page === totalPages;
+
+  // Navigate to sign-in if phoneNumber is missing
+  useEffect(() => {
+    if (!phoneNumber) {
+      console.warn('Phone number not found. Redirecting to sign-in screen.');
+      Alert.alert(
+        "Session Expired",
+        "Your session has expired or phone number is missing. Please sign in again.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.replace('/sign-in') // Use router.replace to prevent going back to this screen
+          }
+        ]
+      );
+    }
+  }, [phoneNumber, router]); // Re-run if phoneNumber or router changes
 
   const handlePhraseChange = (text: string, index: number) => {
     const newPhrases = [...phrases];
@@ -40,7 +58,7 @@ export default function AddKey() {
     setPhrases(newPhrases);
   };
 
-  const { setFileId, fileId } = useVaultStore();
+  const { setFileId, fileId } = useVaultStore(); // Ensure fileId is imported if used (though seems unused in this snippet)
 
 
   const renderPhraseInputs = (start: number, end: number) => {
@@ -86,7 +104,7 @@ export default function AddKey() {
 
   const [start, end] = getStartEndIndex();
 
-  const allPhrasesFilled = selectedKeyType === '12' 
+  const allPhrasesFilled = selectedKeyType === '12'
     ? phrases.slice(0, 12).every(p => p.trim())
     : phrases.every(p => p.trim());
 
@@ -155,16 +173,16 @@ export default function AddKey() {
           <View className="bg-white/10 rounded-xl pt-4">
             {renderPhraseInputs(start, end)}
           </View>
-          
+
           {/* Navigation Controls */}
           {selectedKeyType === '24' && (
             <View className="flex-row items-center justify-between mt-10 px-4">
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={goToPrevPage}
                 disabled={isFirstPage}
               >
-                <Image 
-                  source={ArrowLeft} 
+                <Image
+                  source={ArrowLeft}
                   style={{ opacity: isFirstPage ? 0.5 : 1 }}
                 />
               </TouchableOpacity>
@@ -182,12 +200,12 @@ export default function AddKey() {
                 ))}
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={goToNextPage}
                 disabled={isLastPage}
               >
-                <Image 
-                  source={ArrowRight} 
+                <Image
+                  source={ArrowRight}
                   style={{ opacity: isLastPage ? 0.5 : 1 }}
                 />
               </TouchableOpacity>
@@ -201,10 +219,17 @@ export default function AddKey() {
           text="Done"
           onPress={async () => {
             try {
-              const phrasesToLog = selectedKeyType === '12' 
-                ? phrases.slice(0, 12) 
+              // Ensure phoneNumber is available before proceeding
+              if (!phoneNumber) {
+                Alert.alert("Error", "Phone number is missing. Please sign in again.");
+                router.replace('/sign-in');
+                return;
+              }
+
+              const phrasesToLog = selectedKeyType === '12'
+                ? phrases.slice(0, 12)
                 : phrases.slice(0, 24);
-              
+
               const SEPARATOR = '|||';
               const phrasesString = phrasesToLog.join(SEPARATOR);
               console.log('Phrases:', phrasesString);
@@ -222,15 +247,15 @@ export default function AddKey() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ encrypted_seed_phrase: finalEncrypted }),
               });
-            
+
               if (!response.ok) {
                 throw new Error(`Failed to save to vault: ${response.status}`);
               }
-            
+
               const result = await response.json();
               const fileId = result?.data?.file_id;
               console.log('Saved with File ID:', fileId);
-            
+
               if (!fileId) {
                 throw new Error('No file ID received from server');
               }
@@ -241,7 +266,7 @@ export default function AddKey() {
               // Only navigate after we have the fileId
               router.push({
                 pathname: '/(home)/add-to-wallet',
-                params: { 
+                params: {
                   updatedWallet: JSON.stringify({
                     id: params.walletId,
                     name: params.walletName,
@@ -250,7 +275,7 @@ export default function AddKey() {
                   })
                 }
               });
-              
+
             } catch (err) {
               console.error('Error:', err);
               Alert.alert('Error', 'Failed to save wallet. Please try again.');
