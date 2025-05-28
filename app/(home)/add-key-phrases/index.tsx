@@ -205,40 +205,40 @@ export default function AddKey() {
                 ? phrases.slice(0, 12) 
                 : phrases.slice(0, 24);
               
-                const SEPARATOR = '|||';
-                const phrasesString = phrasesToLog.join(SEPARATOR);
-                console.log('Phrases:', phrasesString);
-          
+              const SEPARATOR = '|||';
+              const phrasesString = phrasesToLog.join(SEPARATOR);
+              console.log('Phrases:', phrasesString);
+
               const encryptedPhrases = await encryptPhrases(phrasesString, phoneNumber);
               console.log('Encrypted Phrases:', encryptedPhrases);
-          
+
               const metaString = `${selectedKeyType}${params.walletName}`;
               const encryptedMeta = await encryptPhrases(metaString, phoneNumber);
-
               const finalEncrypted = `${encryptedPhrases}${SEPARATOR}${encryptedMeta}`;
 
-              try {
-                const response = await fetch('https://k33p-backend.onrender.com/api/v1/vault/store', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ encrypted_seed_phrase: finalEncrypted }),
-                });
-              
-                if (!response.ok) {
-                  throw new Error(`Failed to save to vault: ${response.status}`);
-                }
-              
-                const result = await response.json();
-                const fileId = result?.data?.file_id;
-                console.log('Saved with File ID:', fileId);
-              
-                if (fileId) {
-                  setFileId(fileId);
-                }
-              } catch (error) {
-                console.error('Error while saving encrypted phrase:', error);
+              // First wait for the API call to complete
+              const response = await fetch('https://k33p-backend.onrender.com/api/v1/vault/store', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ encrypted_seed_phrase: finalEncrypted }),
+              });
+            
+              if (!response.ok) {
+                throw new Error(`Failed to save to vault: ${response.status}`);
               }
-              
+            
+              const result = await response.json();
+              const fileId = result?.data?.file_id;
+              console.log('Saved with File ID:', fileId);
+            
+              if (!fileId) {
+                throw new Error('No file ID received from server');
+              }
+
+              // Update the store with the new fileId
+              setFileId(fileId);
+
+              // Only navigate after we have the fileId
               router.push({
                 pathname: '/(home)/add-to-wallet',
                 params: { 
@@ -246,21 +246,16 @@ export default function AddKey() {
                     id: params.walletId,
                     name: params.walletName,
                     keyType: selectedKeyType,
-                    fileId: fileId
+                    fileId: fileId // Use the local fileId from response
                   })
                 }
-              }); 
-              /* router.push({
-                pathname: '/(home)/view-key-phrases',
-                params: {
-                  phrases: finalEncrypted, 
-                },
-              }); */
+              });
+              
             } catch (err) {
-              console.error('Encryption error:', err);
+              console.error('Error:', err);
+              Alert.alert('Error', 'Failed to save wallet. Please try again.');
             }
           }}
-          
           isDisabled={!allPhrasesFilled}
         />
         </View>

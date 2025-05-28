@@ -1,5 +1,5 @@
-// screens/wallet-folders.tsx
 import Button from '@/components/Button';
+import { getStoredWallets, storeWallets } from '@/utils/storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -19,38 +19,44 @@ interface Wallet {
   id: string;
   name: string;
   keyType?: '12' | '24';
+  fileId?: string;
 }
 
 export default function Index() {
   const [addWalletModalVisible, setAddWalletModalVisible] = useState(false);
   const [walletActionModalVisible, setWalletActionModalVisible] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+
   const router = useRouter();
   const params = useLocalSearchParams();
-  
-  // Initialize wallets state from params or local storage
-  const [wallets, setWallets] = useState<Wallet[]>(() => {
-    try {
-      // Try to get from navigation params first
-      if (params.wallets) {
-        return JSON.parse(params.wallets as string);
-      }
-      // Fallback to empty array
-      return [];
-    } catch (e) {
-      console.error('Error parsing wallets:', e);
-      return [];
-    }
-  });
 
-  // Update wallets when params change (coming back from AddKey screen)
+  useEffect(() => {
+    console.log('Navigation params:', params);
+    if (params.updatedWallet) {
+      console.log('Updated Wallet:', JSON.parse(params.updatedWallet as string));
+    }
+  }, [params]);
+  // Load wallets from storage on mount
+  useEffect(() => {
+    const loadWallets = async () => {
+      const savedWallets = await getStoredWallets();
+      setWallets(savedWallets);
+    };
+    loadWallets();
+  }, []);
+
+  // Update specific wallet when coming from add-key-phrases
   useEffect(() => {
     if (params.updatedWallet) {
       try {
-        const updatedWallet = JSON.parse(params.updatedWallet as string);
-        setWallets(prevWallets => 
-          prevWallets.map(w => 
-            w.id === updatedWallet.id ? updatedWallet : w
+        const updatedWallet = JSON.parse(params.updatedWallet as string) as Wallet;
+
+        setWallets((prev) =>
+          prev.map((wallet) =>
+            wallet.id === updatedWallet.id
+              ? { ...wallet, keyType: updatedWallet.keyType, fileId: updatedWallet.fileId }
+              : wallet
           )
         );
       } catch (e) {
@@ -59,13 +65,8 @@ export default function Index() {
     }
   }, [params.updatedWallet]);
 
-  const openAddWalletModal = () => {
-    setAddWalletModalVisible(true);
-  };
-
-  const closeAddWalletModal = () => {
-    setAddWalletModalVisible(false);
-  };
+  const openAddWalletModal = () => setAddWalletModalVisible(true);
+  const closeAddWalletModal = () => setAddWalletModalVisible(false);
 
   const openWalletActionModal = (wallet: Wallet) => {
     setSelectedWallet(wallet);
@@ -73,28 +74,19 @@ export default function Index() {
   };
 
   const closeWalletActionModal = () => {
-    setWalletActionModalVisible(false);
     setSelectedWallet(null);
+    setWalletActionModalVisible(false);
   };
 
-  const handleAddNewWallet = () => {
-    router.push({
-      pathname: '/add-manually',
-      params: {
-        wallets: JSON.stringify(wallets)
-      }
-    });
+  const handleRemoveWallet = async () => {
+    if (!selectedWallet) return;
+    const updatedWallets = wallets.filter(w => w.id !== selectedWallet.id);
+    setWallets(updatedWallets);
+    await storeWallets(updatedWallets);
+    closeWalletActionModal();
   };
 
-  const handleRemoveWallet = () => {
-    if (selectedWallet) {
-      const updatedWallets = wallets.filter(w => w.id !== selectedWallet.id);
-      setWallets(updatedWallets);
-      closeWalletActionModal();
-    }
-  };
-
-  // Group wallets into rows of 2 for the grid
+  // Arrange wallets into rows of 2
   const walletRows = [];
   for (let i = 0; i < wallets.length; i += 2) {
     walletRows.push(wallets.slice(i, i + 2));
@@ -110,7 +102,7 @@ export default function Index() {
         <Image source={TopRight} className="w-10 h-10" resizeMode="contain" />
       </View>
 
-      {/* Middle Content - Wallet Folders Grid */}
+      {/* Wallets Grid */}
       <View className="flex-1 justify-center mt-24">
         {wallets.length > 0 ? (
           <ScrollView contentContainerStyle={{ paddingVertical: 20 }}>
@@ -123,10 +115,7 @@ export default function Index() {
                     className="items-center w-1/2 px-2"
                   >
                     <View className="items-center">
-                      <Image 
-                        source={FolderIcon} 
-                        resizeMode="contain" 
-                      />
+                      <Image source={FolderIcon} resizeMode="contain" />
                       <Text className="text-white font-sora text-base text-center mb-1 mt-5">
                         {wallet.keyType ? `${wallet.keyType} Keys` : 'Add Key Phrases'}
                       </Text>
@@ -155,40 +144,29 @@ export default function Index() {
       {/* Add Wallet Modal */}
       <Modal
         animationType="fade"
-        transparent={true}
+        transparent
         visible={addWalletModalVisible}
         onRequestClose={closeAddWalletModal}
       >
-        <Pressable 
-          onPress={closeAddWalletModal}
-          className="absolute inset-0 bg-black/70"
-        />
-        
+        <Pressable onPress={closeAddWalletModal} className="absolute inset-0 bg-black/70" />
         <View className="flex-1 justify-center items-center">
           <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
             <Text className="text-white font-sora text-sm text-center mb-6">
               How do you want to add wallet
             </Text>
-            
             <View className="space-y-4 gap-4">
               <Button 
                 text="Scan Device" 
                 onPress={() => {
                   closeAddWalletModal();
-                  router.push('/search'); 
+                  router.push('/search');
                 }}
               />
-              
               <Button 
                 text="Add Manually" 
                 onPress={() => {
                   closeAddWalletModal();
-                  router.push({
-                    pathname: '/add-manually',
-                    params: {
-                      wallets: JSON.stringify(wallets)
-                    }
-                  });
+                  router.push('/add-manually');
                 }}
                 outline
               />
@@ -200,15 +178,11 @@ export default function Index() {
       {/* Wallet Action Modal */}
       <Modal
         animationType="fade"
-        transparent={true}
+        transparent
         visible={walletActionModalVisible}
         onRequestClose={closeWalletActionModal}
       >
-        <Pressable 
-          onPress={closeWalletActionModal}
-          className="absolute inset-0 bg-black/80"
-        />
-        
+        <Pressable onPress={closeWalletActionModal} className="absolute inset-0 bg-black/80" />
         <View className="flex-1 justify-center items-center">
           <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
             <View className="space-y-4 gap-4">
@@ -218,17 +192,16 @@ export default function Index() {
                   closeWalletActionModal();
                   router.push({
                     pathname: "/(home)/add-key-phrases",
-                    params: { 
+                    params: {
                       walletId: selectedWallet?.id,
                       walletName: selectedWallet?.name,
-                      wallets: JSON.stringify(wallets)
+                      wallets: JSON.stringify(wallets),
                     }
                   });
                 }}
               />
-              
               <Button 
-                text="Remove Wallet" 
+                text="Remove Wallet"
                 onPress={handleRemoveWallet}
                 danger
               />
@@ -242,7 +215,6 @@ export default function Index() {
         <View className="items-center mb-4">
           <Text className="text-white font-sora-semibold text-sm">Connect Wallet</Text>
         </View>
-
         <Button 
           text={wallets.length > 0 ? "Add Another Wallet" : "Add New Wallet"}
           onPress={openAddWalletModal} 
