@@ -1,5 +1,6 @@
 import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
+import { usePhoneStore } from '@/store/usePhoneStore';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, Keyboard, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -8,8 +9,13 @@ import LockIcon from '../../../assets/images/lock-4.png';
 
 export default function PhoneEntryScreen() {
   const router = useRouter();
-  const [rawPhoneNumber, setRawPhoneNumber] = useState('');
-  const [formattedPhoneNumber, setFormattedPhoneNumber] = useState('');
+  const {
+    rawPhoneNumber,
+    formattedPhoneNumber,
+    setRawPhoneNumber,
+    setFormattedPhoneNumber,
+  } = usePhoneStore();
+  
   const [isValid, setIsValid] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
   const [showKeypad, setShowKeypad] = useState(false);
@@ -35,7 +41,7 @@ export default function PhoneEntryScreen() {
     } else {
       setFormattedPhoneNumber('');
     }
-  }, [rawPhoneNumber]);
+  }, [rawPhoneNumber, setFormattedPhoneNumber]);
 
   const handlePhoneChange = (text: string) => {
     const cleanedNumber = text.replace(/\D/g, '');
@@ -67,12 +73,10 @@ export default function PhoneEntryScreen() {
 
   const handleNOK = () => {
     console.log('Login as NOK');
-    setShowKeypad(true)
+    router.push('/sign-in-nok');
   };
 
   const showError = isTouched && !isValid && rawPhoneNumber.length > 0;
-  
-  // Determine if NOK button should be shown
   const showNOKButton = !showKeypad && rawPhoneNumber.length === 0;
 
   return (
@@ -126,7 +130,7 @@ export default function PhoneEntryScreen() {
         </TouchableOpacity>
 
         {showError && (
-          <Text className="text-error500 font-sora text-sm p-2">
+          <Text className="text-error500 font-sora text-center text-sm p-2">
             Phone number must be 13 digits (including country code)
           </Text>
         )}

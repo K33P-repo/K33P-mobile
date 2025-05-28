@@ -1,5 +1,8 @@
 // components/AddKey.tsx
 import Button from '@/components/Button';
+import { usePhoneStore } from '@/store/usePhoneStore';
+import { useVaultStore } from '@/store/useVaultStore';
+import { encryptPhrases } from '@/utils/crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -17,7 +20,6 @@ import {
 import BackButton from '../../../assets/images/back.png';
 import ArrowLeft from '../../../assets/images/left.png';
 import ArrowRight from '../../../assets/images/right.png';
-
 export default function AddKey() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -25,6 +27,8 @@ export default function AddKey() {
   const [phrases, setPhrases] = useState<string[]>(Array(24).fill(''));
   const [focusedInput, setFocusedInput] = useState<number | null>(null);
   const [page, setPage] = useState<1 | 2>(1);
+
+  const { phoneNumber } = usePhoneStore()
 
   const totalPages = selectedKeyType === '12' ? 1 : 2;
   const isFirstPage = page === 1;
@@ -35,6 +39,9 @@ export default function AddKey() {
     newPhrases[index] = text;
     setPhrases(newPhrases);
   };
+
+  const { setFileId, fileId } = useVaultStore();
+
 
   const renderPhraseInputs = (start: number, end: number) => {
     const inputs = [];
@@ -190,20 +197,72 @@ export default function AddKey() {
 
         {/* Continue Button */}
         <View className="pb-8">
-          <Button
-            text="Done"
-            onPress={() => router.push({
-              pathname: '/(home)/add-to-wallet',
-              params: { 
-                updatedWallet: JSON.stringify({
-                  id: params.walletId,
-                  name: params.walletName,
-                  keyType: selectedKeyType
-                })
+        <Button
+          text="Done"
+          onPress={async () => {
+            try {
+              const phrasesToLog = selectedKeyType === '12' 
+                ? phrases.slice(0, 12) 
+                : phrases.slice(0, 24);
+              
+                const SEPARATOR = '|||';
+                const phrasesString = phrasesToLog.join(SEPARATOR);
+                console.log('Phrases:', phrasesString);
+          
+              const encryptedPhrases = await encryptPhrases(phrasesString, phoneNumber);
+              console.log('Encrypted Phrases:', encryptedPhrases);
+          
+              const metaString = `${selectedKeyType}${params.walletName}`;
+              const encryptedMeta = await encryptPhrases(metaString, phoneNumber);
+
+              const finalEncrypted = `${encryptedPhrases}${SEPARATOR}${encryptedMeta}`;
+
+              try {
+                const response = await fetch('https://k33p-backend.onrender.com/api/v1/vault/store', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ encrypted_seed_phrase: finalEncrypted }),
+                });
+              
+                if (!response.ok) {
+                  throw new Error(`Failed to save to vault: ${response.status}`);
+                }
+              
+                const result = await response.json();
+                const fileId = result?.data?.file_id;
+                console.log('Saved with File ID:', fileId);
+              
+                if (fileId) {
+                  setFileId(fileId);
+                }
+              } catch (error) {
+                console.error('Error while saving encrypted phrase:', error);
               }
-            })}
-            isDisabled={!allPhrasesFilled}
-          />
+              
+              router.push({
+                pathname: '/(home)/add-to-wallet',
+                params: { 
+                  updatedWallet: JSON.stringify({
+                    id: params.walletId,
+                    name: params.walletName,
+                    keyType: selectedKeyType,
+                    fileId: fileId
+                  })
+                }
+              }); 
+              /* router.push({
+                pathname: '/(home)/view-key-phrases',
+                params: {
+                  phrases: finalEncrypted, 
+                },
+              }); */
+            } catch (err) {
+              console.error('Encryption error:', err);
+            }
+          }}
+          
+          isDisabled={!allPhrasesFilled}
+        />
         </View>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>

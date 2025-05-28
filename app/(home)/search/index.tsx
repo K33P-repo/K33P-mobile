@@ -1,12 +1,13 @@
 import Button from '@/components/Button'; // Assuming you have a Button component
 import { MaterialIcons } from '@expo/vector-icons';
+import { Video } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import BackButton from '../../../assets/images/back.png';
-import SearchAnimateImage from '../../../assets/images/search-animate.png';
 
-// Dummy data for found wallets (now only two as requested)
+const screenWidth = Dimensions.get('window').width;
+
 const foundWallets = [
   { id: 'MetaMask', name: 'MetaMask' },
   { id: 'Trust Wallet', name: 'Trust Wallet' },
@@ -63,7 +64,7 @@ export default function SearchPage() {
   const isProceedButtonDisabled = selectedWallets.length === 0;
 
   return (
-    <View className="flex-1 bg-neutral800 px-5 pt-12">
+    <View className="flex-1 bg-[#181818] pt-12">
       {/* Back Button */}
       <View className="absolute top-12 left-5 z-10">
         <TouchableOpacity onPress={() => router.back()}>
@@ -74,31 +75,43 @@ export default function SearchPage() {
           />
         </TouchableOpacity>
       </View>
-
+  
       {/* Centered Text */}
-      <View className="flex-1 justify-center items-center px-8">
-        <Text className="text-white font-sora text-sm text-center leading-relaxed">
+      <View className="flex-1 justify-center items-center px-8 z-10">
+        <Text className="text-white font-sora text-sm text-center leading-relaxed px-8">
           K33P is scanning for active wallets on your device
         </Text>
       </View>
-
-      {/* Image at the Bottom */}
-      <View className="justify-end items-center">
-        <Image
-          source={SearchAnimateImage}
-          resizeMode="contain"
+  
+      <View
+        style={{
+          position: 'absolute',
+          bottom: -200, 
+          width: screenWidth,
+          zIndex: 1,
+        }}
+      >
+        <Video
+          source={require('../../../assets/animation/search-animate.mp4')}
+          shouldPlay
+          isLooping
+          resizeMode="cover"
+          style={{
+            width: screenWidth,
+            height: 550,
+          }}
         />
       </View>
-
-      {/* --- Found Wallets Modal --- */}
+  
+      {/* Modal */}
       <Modal
-        animationType="slide" // Slide from bottom
+        animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)} 
+        onRequestClose={() => setModalVisible(false)}
       >
         <Pressable
-          className="flex-1 justify-end bg-black/70" 
+          className="flex-1 justify-end bg-black/70"
           onPress={() => setModalVisible(false)}
         >
           <View
@@ -106,20 +119,17 @@ export default function SearchPage() {
             style={{ height: '70%' }}
             onStartShouldSetResponder={() => true}
           >
-            {/* Draggable Line (white line centered at the top) */}
             <View className="w-16 h-1 bg-white rounded-full self-center mb-4" />
-
-            {/* Modal Title/Text */}
+  
             <Text className="text-white font-sora-bold text-sm text-center mb-6 px-8">
-            Choose from your list of active wallet to store Key Phrase
+              Choose from your list of active wallet to store Key Phrase
             </Text>
-
-            {/* Wallets List (no borders) */}
+  
             <ScrollView className="flex-1">
               {foundWallets.map(wallet => (
                 <TouchableOpacity
                   key={wallet.id}
-                  className="flex-row items-center  gap-3 py-3" // Removed border-b and border-neutral700
+                  className="flex-row items-center gap-3 py-3"
                   onPress={() => handleWalletSelect(wallet.id)}
                 >
                   {selectedWallets.includes(wallet.id) ? (
@@ -128,29 +138,18 @@ export default function SearchPage() {
                     <MaterialIcons name="radio-button-unchecked" size={20} color="#B0B0B0" />
                   )}
                   <Text className="text-white font-sora text-base">{wallet.name}</Text>
-                  
                 </TouchableOpacity>
               ))}
             </ScrollView>
-
-            {/* Proceed Button */}
+  
             <View className="pb-8 pt-4 gap-y-5">
-            <Button 
-  text="Add Manually" 
-  onPress={() => handleAddManually()}
-  outline
-/>
-
-<Button
-  text="Proceed"
-  onPress={() => handleProceed()}
-  isDisabled={isProceedButtonDisabled}
-/>
-
+              <Button text="Add Manually" onPress={handleAddManually} outline />
+              <Button text="Proceed" onPress={handleProceed} isDisabled={isProceedButtonDisabled} />
             </View>
           </View>
         </Pressable>
       </Modal>
     </View>
   );
+  
 }

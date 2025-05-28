@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, Keyboard, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import BackButton from '../../../assets/images/back.png';
-import LockIcon from '../../../assets/images/lock-1.png';
+import LockIcon from '../../../assets/images/lock-4.png';
 
 export default function PhoneEntryScreen() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function PhoneEntryScreen() {
     setPhoneNumber,
     setFormattedNumber
   } = usePhoneStore();
-  
+
   useEffect(() => {
     if (phoneNumber.length > 0) {
       let formatted = '+';
@@ -44,9 +44,9 @@ export default function PhoneEntryScreen() {
   };
 
   const handleKeyPress = (num: string) => {
-    const newNumber = phoneNumber + num; 
+    const newNumber = phoneNumber + num; // Use the store value
     if (newNumber.length <= 13) {
-      setPhoneNumber(newNumber); 
+      setPhoneNumber(newNumber); // Use the store setter
       setIsValid(newNumber.length === 13);
       setIsTouched(true);
     }
@@ -54,35 +54,36 @@ export default function PhoneEntryScreen() {
 
   const handleBackspace = () => {
     const newNumber = phoneNumber.slice(0, -1); // Use the store value
-    setPhoneNumber(newNumber); 
+    setPhoneNumber(newNumber); // Use the store setter
     setIsValid(newNumber.length === 13);
     setIsTouched(true);
   };
 
   const handleProceed = () => {
     console.log('Entered phone number:', formattedNumber);
-    router.push('/sign-up/otp');
+    router.push('/sign-in-nok/otp');
   };
 
   const showError = isTouched && !isValid && phoneNumber.length > 0;
+  
 
   return (
     <View className="flex-1 bg-neutral800 px-5 pt-12">
       {/* Header */}
       <View className="relative flex-row items-center justify-start mb-12">
-  <TouchableOpacity className="z-10" onPress={() => router.back()}>
-    <Image source={BackButton} className="w-10 h-10" resizeMode="contain" />
-  </TouchableOpacity>
-  <Image
-    source={LockIcon}
-    className="absolute left-1/2 transform -translate-x-1/2 w-[88px] h-"
-    resizeMode="contain"
-  />
-</View>
+        <TouchableOpacity className="z-10" onPress={() => router.back()}>
+          <Image source={BackButton} className="w-10 h-10" resizeMode="contain" />
+        </TouchableOpacity>
+        <Image
+          source={LockIcon}
+          className="absolute left-1/2 transform -translate-x-1/2 w-[88px] h-"
+          resizeMode="contain"
+        />
+      </View>
 
       {/* Content */}
       <View className="flex-1">
-        <Text className="text-white font-sora text-sm  mb-4">
+        <Text className="text-white font-sora text-sm mb-4">
           Enter Phone Number
         </Text>
 
@@ -96,9 +97,9 @@ export default function PhoneEntryScreen() {
         >
           <View pointerEvents="none">
             <TextInput
-              className={` rounded-lg  px-5 py-3 mb-2 ${
-                showError ? 'text-error500' : 'text-white'
-              } font-sora text-sm mb-1 border ${
+              className={`rounded-lg px-5 py-3 mb-2 ${
+                showError ? 'text-error500 border-error500' : 'text-white border-neutral200'
+              } font-sora text-sm border ${
                 isFocused ? 'border-white' : 'border-neutral200'
               }`}
               placeholder="+234-801-2345-678"
@@ -106,7 +107,7 @@ export default function PhoneEntryScreen() {
               keyboardType="phone-pad"
               value={formattedNumber}
               onChangeText={handlePhoneChange}
-              maxLength={18} // +xxx-xxx-xxxx-xxx is 18 characters
+              maxLength={18}
               showSoftInputOnFocus={false}
               onFocus={() => {
                 setShowKeypad(true);
@@ -117,19 +118,21 @@ export default function PhoneEntryScreen() {
         </TouchableOpacity>
 
         {showError && (
-          <Text className="text-error500 font-sora text-center text-sm p-2">
+          <Text className="text-error500 font-sora text-sm p-2 text-center">
             Phone number must be 13 digits (including country code)
           </Text>
         )}
       </View>
 
       {/* Footer */}
-      <View className={`pb-8 ${showKeypad ? 'mb-80' : ''}`}>
+      <View className={`pb-5 ${showKeypad ? 'mb-80' : ''}`}>
         <Button
           text="Proceed"
           onPress={handleProceed}
           isDisabled={!isValid}
         />
+        
+       
       </View>
 
       {/* Dismiss Keypad Overlay */}
