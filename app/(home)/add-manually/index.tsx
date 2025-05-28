@@ -3,8 +3,9 @@ import { addWallets } from '@/utils/storage';
 import { Octicons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react'; // Added useEffect
 import {
+  Alert, // Added Alert for better user feedback
   Animated,
   Easing,
   Image,
@@ -19,10 +20,15 @@ import {
   View,
 } from 'react-native';
 import BackButton from '../../../assets/images/back.png';
+// Import your Zustand stores
+import { usePhoneStore } from '@/store/usePhoneStore';
+import { usePinStore } from '@/store/usePinStore';
 
 interface Wallet {
   id: string;
   name: string;
+  keyType?: '12' | '24'; // Added as per WalletFolders interface
+  fileId?: string;       // Added as per WalletFolders interface
 }
 
 const allWallets: Wallet[] = [
@@ -53,18 +59,39 @@ const popularWallets: Wallet[] = [
   { id: '7', name: 'Telegram' },
 ];
 
-export default  function AddManually() {
+export default function AddManually() {
   const router = useRouter();
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedWallets, setSelectedWallets] = useState<Wallet[]>([]);
   const [isKeyboardVisible, setKeyboardVisible] = useState<boolean>(false);
+  const [isStoreHydrated, setIsStoreHydrated] = useState(false); // State for hydration
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const textInputRef = useRef<TextInput>(null);
 
-  React.useEffect(() => {
+  // Get phoneNumber and pin from your Zustand stores
+  const { phoneNumber } = usePhoneStore();
+  const { pin, hasPin } = usePinStore();
+
+  // Monitor store hydration
+  useEffect(() => {
+    const unsubscribe = usePinStore.persist.onFinishHydration(() => {
+      setIsStoreHydrated(true);
+      console.log('AddManually: Zustand Pin Store Hydrated!');
+    });
+
+    if (usePinStore.persist.hasHydrated()) {
+      setIsStoreHydrated(true);
+      console.log('AddManually: Zustand Pin Store already hydrated on mount.');
+    }
+
+    return () => unsubscribe();
+  }, []);
+
+  // Keyboard listeners
+  useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
     const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
     return () => {
@@ -124,15 +151,65 @@ export default  function AddManually() {
     Keyboard.dismiss();
   };
 
-  const handleProceed =  async () => {
-    await addWallets(selectedWallets);
-    /* router.push({
-      pathname: '/(home)/add-to-wallet',
-      params: { 
-        wallets: JSON.stringify(selectedWallets) 
-      }
-    }); */
-    router.push('/(home)/add-to-wallet');
+  const handleProceed = async () => {
+    // Wait for stores to be hydrated
+    if (!isStoreHydrated) {
+      console.warn('AddManually: Stores not hydrated yet, cannot proceed.');
+      Alert.alert('Loading Session', 'Please wait while we load your session data.');
+      return;
+    }
+
+    if (!phoneNumber) {
+      console.error('AddManually: Phone number is missing during proceed.');
+      Alert.alert(
+        'Session Expired',
+        'Your phone number is missing. Please log in again.',
+        [{ text: 'OK', onPress: () => router.replace('/sign-in') }]
+      );
+      return;
+    }
+
+    // Determine the PIN to use based on 'hasPin'
+    let pinToUse: string;
+    if (hasPin) {
+        // If hasPin is true, a PIN is expected. If 'pin' is null/undefined here, it's an issue.
+        if (pin === null || pin === undefined) {
+            console.error('AddManually: hasPin is true but pin value is null/undefined.');
+            Alert.alert(
+                'PIN Required',
+                'Your PIN is missing or invalid. Please set your PIN again.',
+                [{ text: 'OK', onPress: () => router.replace('/sign-up/pin-setup') }]
+            );
+            return;
+        }
+        pinToUse = pin;
+    } else {
+        // If hasPin is false, no PIN was ever set. Use an empty string or a placeholder if your storage allows it.
+        // **IMPORTANT**: This part depends on whether your app *requires* a PIN to store wallets.
+        // If it does, then the check `if (!pinToUse && hasPin)` or `if (pin === null)` above should be the main validation.
+        // For now, assuming an empty string is acceptable if no PIN was set.
+        pinToUse = '';
+    }
+
+    // Log the values before calling addWallets for debugging
+    console.log('AddManually: Calling addWallets with:', {
+      selectedWallets: selectedWallets.map(w => w.name),
+      phoneNumber: phoneNumber,
+      pinToUse: pinToUse, // Log the actual value being passed
+    });
+
+    try {
+      await addWallets(selectedWallets, phoneNumber, pinToUse);
+      console.log('AddManually: Wallets added successfully via storage utility.');
+      router.push({
+        pathname: '/(home)/add-to-wallet',
+        // If you need to pass data back to add-to-wallet, uncomment and adjust this:
+        // params: { newWallets: JSON.stringify(selectedWallets) }
+      });
+    } catch (error) {
+      console.error('AddManually: Error adding wallets:', error);
+      Alert.alert('Error', 'Failed to add wallets. Please try again.');
+    }
   };
 
   const handleWalletSelect = (wallet: Wallet) => {
@@ -143,6 +220,7 @@ export default  function AddManually() {
         return [...prevSelected, wallet];
       }
     });
+    // If not searching, trigger search mode when a wallet is selected
     if (!isSearching) expandSearch();
   };
 
@@ -167,9 +245,15 @@ export default  function AddManually() {
 
   // Calculate dynamic padding top for the scroll view content
   const getScrollViewContentPaddingTop = () => {
-    let basePadding = 100; // Default padding below search bar
-    if (isSearching && selectedWallets.length > 0) {
-      basePadding = 0; // Adjust for selected tags height
+    // Adjust base padding to account for the animated search bar position and selected tags
+    let basePadding = 0; // Start with 0 as the search bar position is absolute below header
+    if (isSearching) {
+      basePadding = 120; // Enough space for the search bar when it's expanded
+      if (selectedWallets.length > 0) {
+        basePadding += 40; // Add space for selected tags if they appear
+      }
+    } else {
+        basePadding = 0; // No extra padding needed if not searching
     }
     return basePadding;
   };
@@ -216,7 +300,7 @@ export default  function AddManually() {
           <View className={`flex-1 ${!isSearching ? 'justify-end' : ''}`}>
             {/* Selected Wallets - Visible only when searching and if any wallets are selected */}
             {isSearching && selectedWallets.length > 0 && (
-              <View className="flex-row flex-wrap mb-3 mt-28">
+              <View className="flex-row flex-wrap mb-3 mt-28"> {/* Adjusted mt-28 to ensure it's below the search bar */}
                 {selectedWallets.map(wallet => (
                   <View key={wallet.id} className="bg-primary100 flex-row items-center rounded-full px-3 py-1 mr-2 mb-2">
                     <Text className="text-black font-sora text-xs mr-2">{wallet.name}</Text>
@@ -320,10 +404,10 @@ export default  function AddManually() {
           {(selectedWallets.length > 0 || (isSearching && searchQuery !== '')) && (
             <View className="pb-6">
               <Button
-          text="Proceed"
-          onPress={handleProceed}
-          isDisabled={selectedWallets.length === 0}
-        />
+                text="Proceed"
+                onPress={handleProceed}
+                isDisabled={selectedWallets.length === 0}
+              />
             </View>
           )}
         </View>

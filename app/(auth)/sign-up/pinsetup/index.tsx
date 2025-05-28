@@ -1,13 +1,14 @@
 import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
+import { usePinStore } from '@/store/usePinStore'; // Import the store
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Image,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Image,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import BackButton from '../../../../assets/images/back.png';
 import LockIcon2 from '../../../../assets/images/lock-2.png';
@@ -15,13 +16,14 @@ import LockIcon3 from '../../../../assets/images/lock-3.png';
 
 export default function PinSetupScreen() {
   const router = useRouter();
+  const setStoredPin = usePinStore((state) => state.setPin); // Get the setPin action
   const [step, setStep] = useState(1); // 1 = setup, 2 = confirm
   const [pin, setPin] = useState(['', '', '', '']);
   const [confirmPin, setConfirmPin] = useState(['', '', '', '']);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isValid, setIsValid] = useState(false);
   const [isError, setIsError] = useState(false);
-  const [showKeypad, setShowKeypad] = useState(false);
+  const [showKeypad, setShowKeypad] = useState(true); // Keypad should start visible
 
   const handleKeyPress = (num: string) => {
     if (currentIndex < 4) {
@@ -46,46 +48,54 @@ export default function PinSetupScreen() {
 
     if (step === 1) {
       const newPin = [...pin];
-      newPin[currentIndex] = '';
+      newPin[currentIndex - 1] = ''; // Fix: target previous index for backspace
       setPin(newPin);
     } else {
       const newConfirm = [...confirmPin];
-      newConfirm[currentIndex] = '';
+      newConfirm[currentIndex - 1] = ''; // Fix: target previous index for backspace
       setConfirmPin(newConfirm);
     }
   };
 
   useEffect(() => {
-    if (step === 2) {
-      const confirmComplete = confirmPin.every((d) => d !== '');
-      if (confirmComplete) {
+    // Logic for PIN completion and validation
+    const currentPinArray = step === 1 ? pin : confirmPin;
+    const isComplete = currentPinArray.every((d) => d !== '');
+
+    if (isComplete) {
+      if (step === 1) {
+        // Automatically move to confirm step once setup PIN is complete
+        setTimeout(() => {
+          setStep(2);
+          setConfirmPin(['', '', '', '']); // Reset confirm pin
+          setCurrentIndex(0); // Reset index for next step
+        }, 300); // Small delay for visual feedback
+      } else if (step === 2) {
         const match = pin.join('') === confirmPin.join('');
         setIsValid(match);
         setIsError(!match);
 
         if (!match) {
           setTimeout(() => {
-            setPin(['', '', '', '']);
+            setPin(['', '', '', '']); // Reset both
             setConfirmPin(['', '', '', '']);
             setCurrentIndex(0);
             setIsError(false);
-            setStep(1);
-          }, 1500);
+            setStep(1); // Go back to setup
+          }, 1500); // Show error for a moment
         }
       }
+    } else {
+        // If not complete, ensure isValid and isError are reset
+        setIsValid(false);
+        setIsError(false);
     }
-  }, [confirmPin]);
+  }, [pin, confirmPin, step]); // Depend on pin, confirmPin, and step
 
   const handleProceed = () => {
-    if (step === 1) {
-      const pinComplete = pin.every((d) => d !== '');
-      if (pinComplete) {
-        setStep(2);
-        setConfirmPin(['', '', '', '']);
-        setCurrentIndex(0);
-      }
-    } else if (step === 2 && isValid) {
-      router.push('/sign-up/biometrics');
+    if (step === 2 && isValid) {
+      setStoredPin(pin.join('')); // Save PIN to Zustand store
+      router.push('/sign-up/biometrics'); // Navigate to next screen
     }
   };
 
@@ -96,7 +106,8 @@ export default function PinSetupScreen() {
 
   const getSubtext = () => {
     if (step === 1) return 'Setup your 4-digit PIN';
-    if (step === 2 && isValid) return 'PIN match successfully';
+    if (step === 2 && isValid) return 'PIN matched successfully!';
+    if (step === 2 && isError) return 'The PIN you entered is incorrect. Please try again.';
     return 'Confirm your 4-digit PIN';
   };
 
@@ -152,7 +163,7 @@ export default function PinSetupScreen() {
           {/* Error Message */}
           {isError && step === 2 && (
             <Text className="text-error500 text-center text-sm  mt-3">
-              The PIN you entered is incorrect. Please  try again
+              The PIN you entered is incorrect. Please try again
             </Text>
           )}
         </View>
@@ -163,13 +174,13 @@ export default function PinSetupScreen() {
             text={step === 1 ? 'Confirm' : isValid ? 'Continue' : 'Confirm'}
             onPress={handleProceed}
             isDisabled={
-              (step === 1 && pin.some((d) => d === '')) ||
-              (step === 2 && !isValid)
+              (step === 1 && pin.some((d) => d === '')) || // Disable if setup pin not complete
+              (step === 2 && !isValid) // Disable if confirm pin not valid
             }
           />
         </View>
 
-        {/* Dismiss Keypad Area */}
+        {/* Dismiss Keypad Area (Covers area above keypad) */}
         {showKeypad && (
           <TouchableWithoutFeedback onPress={() => setShowKeypad(false)}>
             <View className="absolute top-0 left-0 right-0 bottom-80 bg-transparent" />

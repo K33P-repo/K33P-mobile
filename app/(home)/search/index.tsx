@@ -1,14 +1,24 @@
-import Button from '@/components/Button'; // Assuming you have a Button component
+import Button from '@/components/Button';
+import { usePhoneStore } from '@/store/usePhoneStore'; // Import usePhoneStore
+import { usePinStore } from '@/store/usePinStore'; // Import usePinStore
+import { addWallets } from '@/utils/storage'; // Import addWallets
 import { MaterialIcons } from '@expo/vector-icons';
 import { Video } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, Image, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, Image, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native'; // Added Alert
 import BackButton from '../../../assets/images/back.png';
 
 const screenWidth = Dimensions.get('window').width;
 
-const foundWallets = [
+interface Wallet {
+  id: string;
+  name: string;
+  keyType?: '12' | '24';
+  fileId?: string;
+}
+
+const foundWallets: Wallet[] = [ // Ensure foundWallets uses the Wallet interface
   { id: 'MetaMask', name: 'MetaMask' },
   { id: 'Trust Wallet', name: 'Trust Wallet' },
 ];
@@ -16,15 +26,31 @@ const foundWallets = [
 export default function SearchPage() {
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedWallets, setSelectedWallets] = useState<string[]>([]); // Store IDs of selected wallets
+  const [selectedWallets, setSelectedWallets] = useState<Wallet[]>([]); // Store full Wallet objects
+  const [isStoreHydrated, setIsStoreHydrated] = useState(false); // State for hydration
+
+  const { phoneNumber } = usePhoneStore();
+  const { pin, hasPin } = usePinStore();
 
   useEffect(() => {
-    // Set a timeout to open the modal after 5 seconds
+    const unsubscribe = usePinStore.persist.onFinishHydration(() => {
+      setIsStoreHydrated(true);
+      console.log('SearchPage: Zustand Pin Store Hydrated!');
+    });
+
+    if (usePinStore.persist.hasHydrated()) {
+      setIsStoreHydrated(true);
+      console.log('SearchPage: Zustand Pin Store already hydrated on mount.');
+    }
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       setModalVisible(true);
-    }, 5000); // 5000 milliseconds = 5 seconds
+    }, 5000);
 
-    // Clear the timeout if the component unmounts
     return () => clearTimeout(timer);
   }, []);
 
@@ -32,31 +58,57 @@ export default function SearchPage() {
     setModalVisible(false);
     router.push('/add-manually');
   };
-  
-  const handleProceed = () => {
-    if (isProceedButtonDisabled) return;
-  
-    const selected = foundWallets.filter(wallet => selectedWallets.includes(wallet.id));
-    setModalVisible(false);
-    
-    router.push({
-      pathname: '/(home)/add-to-wallet',
-      params: {
-        wallets: JSON.stringify(selected),
-      },
-    });
-    
-  };
-  
 
-  const handleWalletSelect = (walletId: string) => {
+  const handleProceed = async () => {
+    if (selectedWallets.length === 0) {
+      return;
+    }
+
+    if (!isStoreHydrated) {
+      Alert.alert('Loading Session', 'Please wait while we load your session data.');
+      return;
+    }
+
+    if (!phoneNumber) {
+      Alert.alert(
+        'Session Expired',
+        'Your phone number is missing. Please log in again.',
+        [{ text: 'OK', onPress: () => router.replace('/sign-in') }]
+      );
+      return;
+    }
+
+    let pinToUse: string;
+    if (hasPin) {
+      if (pin === null || pin === undefined) {
+        Alert.alert(
+          'PIN Required',
+          'Your PIN is missing or invalid. Please set your PIN again.',
+          [{ text: 'OK', onPress: () => router.replace('/sign-in/pinsetup') }]
+        );
+        return;
+      }
+      pinToUse = pin;
+    } else {
+      pinToUse = '';
+    }
+
+    try {
+      await addWallets(selectedWallets, phoneNumber, pinToUse);
+      setModalVisible(false); // Close modal before navigation
+      router.push('/(home)/add-to-wallet');
+    } catch (error) {
+      console.error('SearchPage: Error adding wallets:', error);
+      Alert.alert('Error', 'Failed to add wallets. Please try again.');
+    }
+  };
+
+  const handleWalletSelect = (wallet: Wallet) => {
     setSelectedWallets(prevSelected => {
-      if (prevSelected.includes(walletId)) {
-        // If already selected, unselect it
-        return prevSelected.filter(id => id !== walletId);
+      if (prevSelected.some(w => w.id === wallet.id)) {
+        return prevSelected.filter(w => w.id !== wallet.id);
       } else {
-        // If not selected, add it
-        return [...prevSelected, walletId];
+        return [...prevSelected, wallet];
       }
     });
   };
@@ -65,7 +117,6 @@ export default function SearchPage() {
 
   return (
     <View className="flex-1 bg-[#181818] pt-12">
-      {/* Back Button */}
       <View className="absolute top-12 left-5 z-10">
         <TouchableOpacity onPress={() => router.back()}>
           <Image
@@ -75,18 +126,17 @@ export default function SearchPage() {
           />
         </TouchableOpacity>
       </View>
-  
-      {/* Centered Text */}
+
       <View className="flex-1 justify-center items-center px-8 z-10">
         <Text className="text-white font-sora text-sm text-center leading-relaxed px-8">
           K33P is scanning for active wallets on your device
         </Text>
       </View>
-  
+
       <View
         style={{
           position: 'absolute',
-          bottom: -200, 
+          bottom: -200,
           width: screenWidth,
           zIndex: 1,
         }}
@@ -102,8 +152,7 @@ export default function SearchPage() {
           }}
         />
       </View>
-  
-      {/* Modal */}
+
       <Modal
         animationType="slide"
         transparent={true}
@@ -120,19 +169,19 @@ export default function SearchPage() {
             onStartShouldSetResponder={() => true}
           >
             <View className="w-16 h-1 bg-white rounded-full self-center mb-4" />
-  
+
             <Text className="text-white font-sora-bold text-sm text-center mb-6 px-8">
               Choose from your list of active wallet to store Key Phrase
             </Text>
-  
+
             <ScrollView className="flex-1">
               {foundWallets.map(wallet => (
                 <TouchableOpacity
                   key={wallet.id}
                   className="flex-row items-center gap-3 py-3"
-                  onPress={() => handleWalletSelect(wallet.id)}
+                  onPress={() => handleWalletSelect(wallet)} // Pass the full wallet object
                 >
-                  {selectedWallets.includes(wallet.id) ? (
+                  {selectedWallets.some(w => w.id === wallet.id) ? ( // Check using wallet.id
                     <MaterialIcons name="radio-button-checked" size={20} color="#FFD700" />
                   ) : (
                     <MaterialIcons name="radio-button-unchecked" size={20} color="#B0B0B0" />
@@ -141,7 +190,7 @@ export default function SearchPage() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-  
+
             <View className="pb-8 pt-4 gap-y-5">
               <Button text="Add Manually" onPress={handleAddManually} outline />
               <Button text="Proceed" onPress={handleProceed} isDisabled={isProceedButtonDisabled} />
@@ -151,5 +200,4 @@ export default function SearchPage() {
       </Modal>
     </View>
   );
-  
 }
