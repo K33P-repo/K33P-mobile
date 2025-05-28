@@ -45,7 +45,7 @@ export default function PinEntryScreen() {
     const enteredPin = pin.join('');
     
     if (enteredPin === MOCK_PIN) {
-      router.push('/sign-up/biometrics/fingerprint');
+      router.push('/sign-up/biometrics'); 
     } else {
       setIsError(true);
       setPin(['', '', '', '']);

@@ -9,75 +9,63 @@ import LockIcon from '../../../assets/images/lock-4.png';
 
 export default function PhoneEntryScreen() {
   const router = useRouter();
-  const {
-    phoneNumber, 
-    formattedNumber, 
-    setPhoneNumber, 
-    setFormattedNumber, 
-  } = usePhoneStore();
-
+  const [rawPhoneNumber, setRawPhoneNumber] = useState('');
+  const [formattedPhoneNumber, setFormattedPhoneNumber] = useState('');
   const [isValid, setIsValid] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
   const [showKeypad, setShowKeypad] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
-  // Format phone number as +xxx-xxx-xxxx-xxx
+  const { 
+    phoneNumber, 
+    formattedNumber,
+    setPhoneNumber,
+    setFormattedNumber
+  } = usePhoneStore();
+
   useEffect(() => {
     if (phoneNumber.length > 0) {
       let formatted = '+';
-      if (phoneNumber.length > 0) {
-        formatted += phoneNumber.substring(0, 3);
-      }
-      if (phoneNumber.length > 3) {
-        formatted += '-' + phoneNumber.substring(3, 6);
-      }
-      if (phoneNumber.length > 6) {
-        formatted += '-' + phoneNumber.substring(6, 10);
-      }
-      if (phoneNumber.length > 10) {
-        formatted += '-' + phoneNumber.substring(10, 13);
-      }
+      formatted += phoneNumber.substring(0, 3);
+      if (phoneNumber.length > 3) formatted += '-' + phoneNumber.substring(3, 6);
+      if (phoneNumber.length > 6) formatted += '-' + phoneNumber.substring(6, 10);
+      if (phoneNumber.length > 10) formatted += '-' + phoneNumber.substring(10, 13);
       setFormattedNumber(formatted);
     } else {
       setFormattedNumber('');
     }
-  }, [phoneNumber, setFormattedNumber]); // Dependency changed from rawPhoneNumber
+  }, [phoneNumber, setFormattedNumber]);
 
   const handlePhoneChange = (text: string) => {
     const cleanedNumber = text.replace(/\D/g, '');
-    setPhoneNumber(cleanedNumber); // Changed from setRawPhoneNumber
+    setPhoneNumber(cleanedNumber); // Use the store setter
     setIsValid(cleanedNumber.length === 13);
     setIsTouched(true);
   };
 
   const handleKeyPress = (num: string) => {
-    const newNumber = phoneNumber + num; // Changed from rawPhoneNumber
+    const newNumber = phoneNumber + num; // Use the store value
     if (newNumber.length <= 13) {
-      setPhoneNumber(newNumber); // Changed from setRawPhoneNumber
+      setPhoneNumber(newNumber); // Use the store setter
       setIsValid(newNumber.length === 13);
       setIsTouched(true);
     }
   };
 
   const handleBackspace = () => {
-    const newNumber = phoneNumber.slice(0, -1); // Changed from rawPhoneNumber
-    setPhoneNumber(newNumber); // Changed from setRawPhoneNumber
+    const newNumber = phoneNumber.slice(0, -1); // Use the store value
+    setPhoneNumber(newNumber); // Use the store setter
     setIsValid(newNumber.length === 13);
     setIsTouched(true);
   };
 
   const handleProceed = () => {
-    console.log('Entered phone number:', formattedNumber); // Changed from formattedPhoneNumber
-    router.push('/sign-in/otp');
+    console.log('Entered phone number:', formattedNumber);
+    router.push('/sign-in-nok/otp');
   };
 
-  const handleNOK = () => {
-    console.log('Login as NOK');
-    router.push('/sign-in-nok');
-  };
-
-  const showError = isTouched && !isValid && phoneNumber.length > 0; // Changed from rawPhoneNumber
-  const showNOKButton = !showKeypad && phoneNumber.length === 0; // Changed from rawPhoneNumber
+  const showError = isTouched && !isValid && phoneNumber.length > 0;
+  
 
   return (
     <View className="flex-1 bg-neutral800 px-5 pt-12">
@@ -117,7 +105,7 @@ export default function PhoneEntryScreen() {
               placeholder="+234-801-2345-678"
               placeholderTextColor="#969696"
               keyboardType="phone-pad"
-              value={formattedNumber} // Changed from formattedPhoneNumber
+              value={formattedNumber}
               onChangeText={handlePhoneChange}
               maxLength={18}
               showSoftInputOnFocus={false}
@@ -130,7 +118,7 @@ export default function PhoneEntryScreen() {
         </TouchableOpacity>
 
         {showError && (
-          <Text className="text-error500 font-sora text-center text-sm p-2">
+          <Text className="text-error500 font-sora text-sm p-2 text-center">
             Phone number must be 13 digits (including country code)
           </Text>
         )}
@@ -143,16 +131,8 @@ export default function PhoneEntryScreen() {
           onPress={handleProceed}
           isDisabled={!isValid}
         />
-
-        {showNOKButton && (
-          <View className='mt-5'>
-            <Button
-              text="Login as NOK"
-              onPress={handleNOK}
-              outline
-            />
-          </View>
-        )}
+        
+       
       </View>
 
       {/* Dismiss Keypad Overlay */}

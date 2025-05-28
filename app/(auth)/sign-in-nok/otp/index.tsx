@@ -1,12 +1,11 @@
 import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
-import { usePhoneStore } from '@/store/usePhoneStore';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import BackButton from '../../../../assets/images/back.png';
-import LockIcon from '../../../../assets/images/lock-1.png';
-import LockIcon2 from '../../../../assets/images/lock-2.png';
+import LockIcon from '../../../../assets/images/lock-4.png';
+import LockIcon2 from '../../../../assets/images/loginlock-2.png';
 
 export default function OTPEntryScreen() {
   const router = useRouter();
@@ -18,8 +17,6 @@ export default function OTPEntryScreen() {
   const [isError, setIsError] = useState(false);
   const [showKeypad, setShowKeypad] = useState(false);
   const otpInputs = useRef<(TextInput | null)[]>([]);
-
-  const { formattedNumber } = usePhoneStore();
 
   // Countdown timer
   useEffect(() => {
@@ -86,7 +83,7 @@ export default function OTPEntryScreen() {
 
   const handleProceed = () => {
     if (isValid) {
-      router.push('/sign-up/pinsetup');
+      router.push('/sign-in-nok/pinsetup');
     }
   };
 
@@ -117,7 +114,7 @@ export default function OTPEntryScreen() {
             Enter OTP
           </Text>
           <Text className="text-neutral200 font-sora text-sm text-center mb-8 px-8 py-2">
-            A 5-digit OTP has been sent to {formattedNumber}
+            A 5-digit OTP has been sent to +234****78
           </Text>
 
           {/* OTP Boxes */}

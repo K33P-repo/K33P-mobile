@@ -1,4 +1,5 @@
 import Button from '@/components/Button';
+import { addWallets } from '@/utils/storage';
 import { Octicons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
@@ -52,7 +53,7 @@ const popularWallets: Wallet[] = [
   { id: '7', name: 'Telegram' },
 ];
 
-export default function AddManually() {
+export default  function AddManually() {
   const router = useRouter();
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -123,13 +124,15 @@ export default function AddManually() {
     Keyboard.dismiss();
   };
 
-  const handleProceed = () => {
-    router.push({
+  const handleProceed =  async () => {
+    await addWallets(selectedWallets);
+    /* router.push({
       pathname: '/(home)/add-to-wallet',
       params: { 
         wallets: JSON.stringify(selectedWallets) 
       }
-    });
+    }); */
+    router.push('/(home)/add-to-wallet');
   };
 
   const handleWalletSelect = (wallet: Wallet) => {

@@ -8,6 +8,14 @@
     "scheme": "k33pmobil",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/K33P.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#121212",
+      "dark": {
+        "backgroundColor": "#121212"
+      }
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.deepurple.k33pmobil"
@@ -50,7 +58,8 @@
         }
       ],
       "react-native-vision-camera",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

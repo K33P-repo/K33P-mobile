@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native'
+
 import SlideImg1 from '../../assets/images/carouselImage.png'
 import SlideImg3 from '../../assets/images/carouselImage2.png'
 import SlideImg2 from '../../assets/images/carouselImage3.png'
@@ -42,8 +43,8 @@ const slides = [
   },
 ]
 
-const ITEM_WIDTH = screenWidth * 0.85
-const ITEM_SPACING = screenWidth * 0.05 
+const ITEM_WIDTH = screenWidth * 0.91
+const ITEM_SPACING = screenWidth * 0.02
 
 export default function Index() {
   const [current, setCurrent] = useState(0)
@@ -51,12 +52,13 @@ export default function Index() {
   const router = useRouter()
   const flatListRef = useRef(null)
 
-  const onViewRef = React.useRef(({ viewableItems }) => {
+  const onViewRef = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
       setCurrent(viewableItems[0].index)
     }
   })
-  const viewConfigRef = React.useRef({ viewAreaCoveragePercentThreshold: 50 })
+
+  const viewConfigRef = useRef({ viewAreaCoveragePercentThreshold: 50 })
 
   const prevSlide = () => {
     const prevIndex = current === 0 ? slides.length - 1 : current - 1
@@ -68,60 +70,53 @@ export default function Index() {
     flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true })
   }
 
-  const openModal = () => {
-    setModalVisible(true)
-  }
+  const openModal = () => setModalVisible(true)
+  const closeModal = () => setModalVisible(false)
 
-  const closeModal = () => {
-    setModalVisible(false)
-  }
-
-  const renderItem = ({ item, index }) => {
-    return (
-      <View
-        style={{
-          width: ITEM_WIDTH,
-          marginRight: ITEM_SPACING,
-          backgroundColor: '#121212',
-          borderRadius: 12,
-          padding: 8,
-          flexDirection: 'row',
-          alignItems: 'center',
-          opacity: index === current ? 1 : 0.6,
-        }}
-      >
-        <Image
-          source={item.image}
-          style={{ width: 80, height: 80, marginRight: 20 }}
-          resizeMode="contain"
-        />
-        <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              color: '#B0B0B0',
-              fontSize: 12,
-              marginBottom: 4,
-              fontFamily: 'Sora-Regular',
-            }}
-          >
-            {item.label}
-          </Text>
-          <Text
-            style={{
-              color: 'white',
-              fontSize: 14,
-              fontFamily: 'Sora-Bold',
-            }}
-          >
-            {item.headline}
-          </Text>
-        </View>
+  const renderItem = ({ item, index }) => (
+    <View
+      style={{
+        width: ITEM_WIDTH,
+        marginRight: ITEM_SPACING,
+        backgroundColor: '#121212',
+        borderRadius: 12,
+        padding: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        opacity: index === current ? 1 : 0.6,
+      }}
+    >
+      <Image
+        source={item.image}
+        style={{ width: 80, height: 80, marginRight: 20 }}
+        resizeMode="contain"
+      />
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            color: '#B0B0B0',
+            fontSize: 12,
+            marginBottom: 4,
+            fontFamily: 'Sora-Regular',
+          }}
+        >
+          {item.label}
+        </Text>
+        <Text
+          style={{
+            color: 'white',
+            fontSize: 14,
+            fontFamily: 'Sora-Bold',
+          }}
+        >
+          {item.headline}
+        </Text>
       </View>
-    )
-  }
+    </View>
+  )
 
   return (
-    <View className="flex-1 bg-neutral800 justify-between px-4 pt-6 pb-12 relative">
+    <View className="flex-1 bg-neutral800 justify-between pt-6 pb-12 relative">
       {/* Top Icons */}
       <View className="absolute top-10 left-4">
         <Image source={TopLeft} className="w-10 h-10" resizeMode="contain" />
@@ -130,7 +125,7 @@ export default function Index() {
         <Image source={TopRight} className="w-10 h-10" resizeMode="contain" />
       </View>
 
-      {/* Carousel with Peeking */}
+      {/* Carousel */}
       <View style={{ marginTop: 80 }}>
         <FlatList
           ref={flatListRef}
@@ -142,7 +137,13 @@ export default function Index() {
           snapToInterval={ITEM_WIDTH + ITEM_SPACING}
           decelerationRate="fast"
           snapToAlignment="start"
-          contentContainerStyle={{ paddingLeft: 20 }}
+          initialScrollIndex={0}
+          getItemLayout={(data, index) => ({
+            length: ITEM_WIDTH + ITEM_SPACING,
+            offset: (ITEM_WIDTH + ITEM_SPACING) * index,
+            index,
+          })}
+          contentContainerStyle={{ paddingLeft: 27, paddingRight: ITEM_SPACING }}
           onViewableItemsChanged={onViewRef.current}
           viewabilityConfig={viewConfigRef.current}
           pagingEnabled={false}
@@ -172,46 +173,39 @@ export default function Index() {
       </View>
 
       {/* Bottom Buttons */}
-      <View className="bg-mainBlack px-4 py-8 rounded-3xl space-y-4">
+      <View className="bg-mainBlack px-4 py-8 rounded-3xl space-y-4 mt-10">
         <View className="items-center mb-4">
           <Text className="text-white font-sora-semibold text-sm">Connect Wallet</Text>
         </View>
-
         <Button text="Add New Wallet" onPress={openModal} />
       </View>
 
-      {/* Add Wallet Modal */}
+      {/* Modal */}
       <Modal
         animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={closeModal}
       >
-        <Pressable 
-          onPress={closeModal}
-          className="absolute inset-0 bg-black/60"
-        />
-        
+        <Pressable onPress={closeModal} className="absolute inset-0 bg-black/60" />
         <View className="flex-1 justify-center items-center">
           <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
             <Text className="text-white font-sora text-sm text-center mb-6">
               How do you want to add wallet
             </Text>
-            
             <View className="space-y-4 gap-4">
-              <Button 
-                text="Scan Device" 
+              <Button
+                text="Scan Device"
                 onPress={() => {
-                  closeModal();
-                  router.push('/search'); 
+                  closeModal()
+                  router.push('/search')
                 }}
               />
-              
-              <Button 
-                text="Add Manually" 
+              <Button
+                text="Add Manually"
                 onPress={() => {
-                  closeModal();
-                  router.push('/add-manually');
+                  closeModal()
+                  router.push('/add-manually')
                 }}
                 outline
               />

@@ -1,5 +1,6 @@
 import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
+import { usePhoneStore } from '@/store/usePhoneStore';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, Keyboard, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -15,62 +16,55 @@ export default function PhoneEntryScreen() {
   const [showKeypad, setShowKeypad] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
-  // Format phone number as +xxx-xxx-xxxx-xxx
+  const { 
+    phoneNumber, 
+    formattedNumber,
+    setPhoneNumber,
+    setFormattedNumber
+  } = usePhoneStore();
+  
   useEffect(() => {
-    if (rawPhoneNumber.length > 0) {
+    if (phoneNumber.length > 0) {
       let formatted = '+';
-      // Add first 3 digits
-      if (rawPhoneNumber.length > 0) {
-        formatted += rawPhoneNumber.substring(0, 3);
-      }
-      // Add second 3 digits
-      if (rawPhoneNumber.length > 3) {
-        formatted += '-' + rawPhoneNumber.substring(3, 6);
-      }
-      // Add next 4 digits
-      if (rawPhoneNumber.length > 6) {
-        formatted += '-' + rawPhoneNumber.substring(6, 10);
-      }
-      // Add last 3 digits
-      if (rawPhoneNumber.length > 10) {
-        formatted += '-' + rawPhoneNumber.substring(10, 13);
-      }
-      setFormattedPhoneNumber(formatted);
+      formatted += phoneNumber.substring(0, 3);
+      if (phoneNumber.length > 3) formatted += '-' + phoneNumber.substring(3, 6);
+      if (phoneNumber.length > 6) formatted += '-' + phoneNumber.substring(6, 10);
+      if (phoneNumber.length > 10) formatted += '-' + phoneNumber.substring(10, 13);
+      setFormattedNumber(formatted);
     } else {
-      setFormattedPhoneNumber('');
+      setFormattedNumber('');
     }
-  }, [rawPhoneNumber]);
+  }, [phoneNumber, setFormattedNumber]);
 
   const handlePhoneChange = (text: string) => {
     const cleanedNumber = text.replace(/\D/g, '');
-    setRawPhoneNumber(cleanedNumber);
-    const valid = cleanedNumber.length === 13; // Total 13 digits: +xxx-xxx-xxxx-xxx
-    setIsValid(valid);
+    setPhoneNumber(cleanedNumber); // Use the store setter
+    setIsValid(cleanedNumber.length === 13);
     setIsTouched(true);
   };
 
   const handleKeyPress = (num: string) => {
-    const newNumber = rawPhoneNumber + num;
+    const newNumber = phoneNumber + num; 
     if (newNumber.length <= 13) {
-      setRawPhoneNumber(newNumber);
+      setPhoneNumber(newNumber); 
       setIsValid(newNumber.length === 13);
       setIsTouched(true);
     }
   };
 
   const handleBackspace = () => {
-    const newNumber = rawPhoneNumber.slice(0, -1);
-    setRawPhoneNumber(newNumber);
+    const newNumber = phoneNumber.slice(0, -1); // Use the store value
+    setPhoneNumber(newNumber); 
     setIsValid(newNumber.length === 13);
     setIsTouched(true);
   };
 
   const handleProceed = () => {
-    console.log('Entered phone number:', formattedPhoneNumber);
+    console.log('Entered phone number:', formattedNumber);
     router.push('/sign-up/otp');
   };
 
-  const showError = isTouched && !isValid && rawPhoneNumber.length > 0;
+  const showError = isTouched && !isValid && phoneNumber.length > 0;
 
   return (
     <View className="flex-1 bg-neutral800 px-5 pt-12">
@@ -110,7 +104,7 @@ export default function PhoneEntryScreen() {
               placeholder="+234-801-2345-678"
               placeholderTextColor="#969696"
               keyboardType="phone-pad"
-              value={formattedPhoneNumber}
+              value={formattedNumber}
               onChangeText={handlePhoneChange}
               maxLength={18} // +xxx-xxx-xxxx-xxx is 18 characters
               showSoftInputOnFocus={false}

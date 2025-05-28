@@ -78,7 +78,6 @@ export default function OTPEntryScreen() {
   const handleResend = () => {
     setTimer(120);
     setIsResendDisabled(true);
-    // Add your resend OTP logic here
   };
 
   const handleProceed = () => {
