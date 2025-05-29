@@ -63,7 +63,7 @@ export default function Index() {
         }}
       >
         <Button text="Login" onPress={() => router.push('/sign-in')} outline />
-        <Button text="Create Account" onPress={() => router.push('/sign-up')} />
+        <Button text="Create Account" onPress={() => router.push('/sign-up/did')} />
         <Button text="Home" onPress={() => router.push('/(home)')} />
       </Animated.View>
     </SafeAreaView>

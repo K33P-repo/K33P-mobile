@@ -59,7 +59,8 @@
       ],
       "react-native-vision-camera",
       "expo-secure-store",
-      "expo-video"
+      "expo-video",
+      "@react-native-firebase/app", "@react-native-firebase/auth"
     ],
     "experiments": {
       "typedRoutes": true

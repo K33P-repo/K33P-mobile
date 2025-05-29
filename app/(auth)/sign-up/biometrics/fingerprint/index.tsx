@@ -1,24 +1,89 @@
-import Button from '@/components/Button';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Image, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import BackButton from '../../../../../assets/images/back.png';
 import CenterImage from '../../../../../assets/images/fingerprint.png';
 import LockIcon from '../../../../../assets/images/lock-3.png';
 
 export default function Fingerprint() {
   const router = useRouter();
-  const [showKeypad, setShowKeypad] = useState(false);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
+  useEffect(() => {
+    checkBiometricAvailability();
+  }, []);
+
+  const checkBiometricAvailability = async () => {
+    const compatible = await LocalAuthentication.hasHardwareAsync();
+    if (!compatible) {
+      Alert.alert('Device Error', 'Your device does not support biometric authentication.');
+      setIsBiometricAvailable(false);
+      return;
+    }
+
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    if (!enrolled) {
+      Alert.alert('Setup Required', 'No fingerprint or face ID is enrolled on your device. Please set up biometrics in your device settings.');
+      setIsBiometricAvailable(false);
+      return;
+    }
+
+    setIsBiometricAvailable(true);
+  };
+
+  const handleFingerprintScan = async () => {
+    if (!isBiometricAvailable || isAuthenticating) return;
+
+    setIsAuthenticating(true);
+    setCompletionPercentage(0);
+
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Verify your identity to proceed',
+        fallbackLabel: 'Use Passcode',
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        setCompletionPercentage(100);
+        router.push('/(home)');
+      } else {
+        setCompletionPercentage(0);
+        if (result.error === 'user_fallback') {
+          Alert.alert('Authentication Canceled', 'You chose to use a fallback method.');
+        } else if (result.error === 'user_cancel') {
+          Alert.alert('Authentication Canceled', 'You canceled the fingerprint scan.');
+        } else if (result.error === 'system_cancel' || result.error === 'app_cancel') {
+          Alert.alert('Authentication Failed', 'The authentication process was interrupted. Please try again.');
+        } else if (result.error === 'lockout' || result.error === 'too_many_attempts') {
+          Alert.alert('Authentication Failed', 'Too many failed attempts. Biometric authentication is temporarily locked. Please try again later or use your device passcode/PIN.');
+        } else {
+          Alert.alert('Authentication Failed', `Incorrect fingerprint. Please try again. Error: ${result.error || 'Unknown'}`);
+        }
+      }
+    } catch (error: any) {
+      console.error('Biometric authentication error:', error);
+      Alert.alert('Error', `An unexpected error occurred during authentication: ${error.message || 'Unknown error'}`);
+      setCompletionPercentage(0);
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
 
   const handleProceed = () => {
+    if (completionPercentage === 100) {
       router.push('/(home)');
+    } else {
+      Alert.alert('Action Required', 'Please successfully verify your fingerprint before proceeding.');
+    }
   };
 
   return (
-    <TouchableWithoutFeedback onPress={() => setShowKeypad(false)}>
-      <View className="flex-1 bg-neutral800 px-5 pt-12 ">
-        {/* Header */}
+    <TouchableWithoutFeedback>
+      <View className="flex-1 bg-neutral800 px-5 pt-12">
         <View className="relative flex-row items-center justify-start mb-4">
           <TouchableOpacity className="z-10" onPress={() => router.back()}>
             <Image source={BackButton} className="w-10 h-10" resizeMode="contain" />
@@ -30,56 +95,29 @@ export default function Fingerprint() {
           />
         </View>
 
-        
+        <View className="flex-1 items-center justify-center">
 
-        {/* Centered Image */}
-        <View className="items-center ">
+          <TouchableOpacity
+            onPress={handleFingerprintScan}
+            disabled={isAuthenticating || !isBiometricAvailable}
+          >
+            <Image
+              source={CenterImage}
+              className="w-[150px] h-[150px]"
+              resizeMode="contain"
+              style={{ opacity: isAuthenticating ? 0.6 : 1 }}
+            />
+          </TouchableOpacity>
+        </View>
         <View className="mb-8 px-2">
-          {/* First Icon-Text Pair */}
-            <View className="mt-10">
-              <Text className="text-white font-sora text-sm text-center" numberOfLines={3}>
-              Touch Screen to Register Fingerprint
-              </Text>
-            </View>
-         
+            <Text className="text-white font-sora text-sm text-center mb-4" numberOfLines={3}>
+              Touch the fingerprint icon to verify your identity
+            </Text>
 
-          {/* Second Icon-Text Pair */}
-          <View className="">
-            
-            <View className="">
-              <Text className="text-white font-sora-bold text-2xl text-center mt-8" >
-               0%
-              </Text>
-            </View>
           </View>
-        </View>
-          <Image 
-            source={CenterImage} 
-            className="mt-16 " 
-            resizeMode="contain" 
-          />
-        </View>
 
-        {/* Icon-Text Pairs with proper text wrapping */}
-        
 
-        {/* Proceed Button at Bottom */}
-        <View className="flex-1 justify-end pb-8">
-          <Button
-            text="Done"
-            onPress={handleProceed}
-          />
-        </View>
-
-        {/* Dismiss Keypad Overlay */}
-        {showKeypad && (
-          <TouchableWithoutFeedback onPress={() => setShowKeypad(false)}>
-            <View className="absolute top-0 left-0 right-0 bottom-80 bg-transparent" />
-          </TouchableWithoutFeedback>
-        )}
-
-        
-      </View>
+     </View>
     </TouchableWithoutFeedback>
   );
 }

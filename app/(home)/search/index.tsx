@@ -95,7 +95,7 @@ export default function SearchPage() {
 
     try {
       await addWallets(selectedWallets, phoneNumber, pinToUse);
-      setModalVisible(false); // Close modal before navigation
+      setModalVisible(false);
       router.push('/(home)/add-to-wallet');
     } catch (error) {
       console.error('SearchPage: Error adding wallets:', error);
