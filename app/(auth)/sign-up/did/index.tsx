@@ -2,7 +2,6 @@ import { WalletConnectModal, useWalletConnectModal } from '@walletconnect/modal-
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-// Replace with your actual WalletConnect Project ID
 const projectId = '409491f67431b645b1e831e3cb666660'; 
 
 const providerMetadata = {
@@ -11,7 +10,7 @@ const providerMetadata = {
   url: 'https://yourproject.com',
   icons: ['https://yourproject.com/icon.png'],
   redirect: {
-    native: 'yourappscheme://', // deep linking
+    native: 'yourappscheme://',
   },
 };
 
@@ -22,7 +21,7 @@ const ConnectWalletScreen = () => {
     if (isConnected) {
       await provider?.disconnect();
     } else {
-      open(); // Opens WalletConnect modal to select a wallet
+      open();
     }
   };
 
