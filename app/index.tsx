@@ -12,7 +12,7 @@ export default function Index() {
   const { fontsLoaded, onLayoutRootView } = useCustomFonts();
   const videoRef = useRef(null);
   const [showButtons, setShowButtons] = useState(false);
-  const slideAnim = useRef(new Animated.Value(100)).current; // Start off-screen (100 units below)
+  const slideAnim = useRef(new Animated.Value(100)).current; 
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -54,16 +54,15 @@ export default function Index() {
         <Image source={logoImage} />
       </View>
 
-      {/* Animated Buttons at the bottom */}
       <Animated.View 
         className="w-full absolute bottom-10 px-6 gap-y-4"
         style={{
           transform: [{ translateY: slideAnim }],
-          opacity: showButtons ? 1 : 0, // Fade in simultaneously
+          opacity: showButtons ? 1 : 0, 
         }}
       >
         <Button text="Login" onPress={() => router.push('/sign-in')} outline />
-        <Button text="Create Account" onPress={() => router.push('/sign-up/did')} />
+        <Button text="Create Account" onPress={() => router.push('/sign-up/biometrics/facescan')} />
         <Button text="Home" onPress={() => router.push('/(home)')} />
       </Animated.View>
     </SafeAreaView>

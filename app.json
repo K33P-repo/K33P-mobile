@@ -60,7 +60,12 @@
       "react-native-vision-camera",
       "expo-secure-store",
       "expo-video",
-      "@react-native-firebase/app", "@react-native-firebase/auth"
+      ["expo-camera",
+      {
+        "cameraPermission": "Allow K33P to access your camera",
+        "microphonePermission": "Allow K33P to access your microphone",
+        "recordAudioAndroid": true
+      }]
     ],
     "experiments": {
       "typedRoutes": true
