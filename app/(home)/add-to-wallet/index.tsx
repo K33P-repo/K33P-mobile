@@ -1,9 +1,11 @@
 import Button from '@/components/Button';
+import { usePhoneStore } from '@/store/usePhoneStore';
+import { usePinStore } from '@/store/usePinStore'; // Ensure usePinStore is imported
 import { getStoredWallets, addWallets as storageAddWallets, storeWallets } from '@/utils/storage';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert, // Import Alert for user feedback
+  Alert,
   Image,
   Modal,
   Pressable,
@@ -20,7 +22,7 @@ interface Wallet {
   id: string;
   name: string;
   keyType?: '12' | '24';
-  fileId?: string; // fileId is crucial for deletion
+  fileId?: string;
 }
 
 export default function Index() {
@@ -28,50 +30,92 @@ export default function Index() {
   const [walletActionModalVisible, setWalletActionModalVisible] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [isStoreHydrated, setIsStoreHydrated] = useState(false); // New state to track hydration
+  const params = useLocalSearchParams(); // This is correct
 
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const { phoneNumber } = usePhoneStore();
+  const { pin, hasPin } = usePinStore(); // Get pin and hasPin
 
+  // Monitor store hydration
   useEffect(() => {
-    console.log('WalletFolders - Navigation params:', params);
-    if (params.updatedWallet) {
-      console.log('WalletFolders - Updated Wallet from params:', JSON.parse(params.updatedWallet as string));
+    const unsubscribe = usePinStore.persist.onFinishHydration(() => {
+      setIsStoreHydrated(true);
+      console.log('Zustand Pin Store Hydrated!');
+    });
+
+    // Also check initial state in case it's already hydrated or on web
+    if (usePinStore.persist.hasHydrated()) {
+      setIsStoreHydrated(true);
+      console.log('Zustand Pin Store already hydrated on mount.');
     }
-    if (params.newWallets) {
-      console.log('WalletFolders - New Wallets from params:', JSON.parse(params.newWallets as string));
+
+    return () => unsubscribe();
+  }, []);
+
+  // Effect to handle redirection if phone number or PIN is genuinely missing AFTER hydration
+  useEffect(() => {
+    // Only proceed if stores are hydrated
+    if (!isStoreHydrated) return;
+
+    // If hasPin is true but the pin value is null, something might be wrong with storage or decryption.
+    // However, if hasPin is *false*, it means no PIN was ever set (or it was cleared).
+    // For phone number, if it's null, then it's genuinely missing.
+    if (!phoneNumber || (hasPin && pin === null) || (!hasPin && pin === null && router.canGoBack())) {
+        console.warn('Phone number or PIN status requires re-authentication.');
+        Alert.alert(
+            "Session Expired",
+            "Your session has expired or login details are missing. Please sign in again.",
+            [{ text: "OK", onPress: () => router.replace('/sign-in') }]
+        );
     }
-  }, [params]);
+  }, [phoneNumber, pin, hasPin, isStoreHydrated, router]); // Add isStoreHydrated to dependencies
+
 
   useFocusEffect(
     useCallback(() => {
-      console.log('WalletFolders - useFocusEffect: Loading wallets from storage...');
       const loadData = async () => {
-        const savedWallets = await getStoredWallets();
-        console.log('WalletFolders - Wallets loaded from storage:', savedWallets);
-        setWallets(savedWallets);
+        // Only attempt to load wallets if stores are hydrated and credentials are truly available
+        if (isStoreHydrated && phoneNumber && (pin !== null || !hasPin)) {
+          console.log('WalletFolders - useFocusEffect: Loading wallets from storage...');
+          const savedWallets = await getStoredWallets(phoneNumber, pin || ''); // Pass pin as string, or empty if no pin
+          console.log('WalletFolders - Wallets loaded from storage:', savedWallets);
+          setWallets(savedWallets);
+        } else if (isStoreHydrated && (!phoneNumber || (hasPin && pin === null))) {
+           // If stores are hydrated but credentials are bad, clear wallets to reflect no access
+           setWallets([]);
+           console.log('WalletFolders - Cleared wallets due to missing credentials after hydration.');
+        } else {
+            console.log('WalletFolders - Waiting for stores to hydrate or credentials to become available...');
+        }
       };
       loadData();
 
+      // Cleanup function (optional, but good practice if you had subscriptions)
       return () => {};
-    }, [])
+    }, [phoneNumber, pin, hasPin, isStoreHydrated]) // Re-run effect if these change
   );
 
   useEffect(() => {
+    if (!isStoreHydrated || !phoneNumber) return; // Wait for hydration and phone number
+
     if (params.updatedWallet) {
       try {
         const updatedWallet = JSON.parse(params.updatedWallet as string) as Wallet;
         console.log('WalletFolders - Processing updatedWallet param:', updatedWallet);
 
         const updateAndSave = async () => {
-          const currentWallets = await getStoredWallets();
-          const newWallets = currentWallets.map((wallet) =>
-            wallet.id === updatedWallet.id
-              ? { ...wallet, keyType: updatedWallet.keyType, fileId: updatedWallet.fileId }
-              : wallet
-          );
-          await storeWallets(newWallets);
-          console.log('WalletFolders - Wallet updated and saved to storage. Triggering re-render.');
-          setWallets(newWallets);
+          if (phoneNumber && (pin !== null || !hasPin)) {
+            const currentWallets = await getStoredWallets(phoneNumber, pin || '');
+            const newWallets = currentWallets.map((wallet) =>
+              wallet.id === updatedWallet.id
+                ? { ...wallet, keyType: updatedWallet.keyType, fileId: updatedWallet.fileId }
+                : wallet
+            );
+            await storeWallets(newWallets, phoneNumber, pin || '');
+            console.log('WalletFolders - Wallet updated and saved to storage. Triggering re-render.');
+            setWallets(newWallets);
+          }
         };
         updateAndSave();
 
@@ -79,18 +123,22 @@ export default function Index() {
         console.error('WalletFolders - Error parsing updated wallet from params:', e);
       }
     }
-  }, [params.updatedWallet]);
+  }, [params.updatedWallet, phoneNumber, pin, hasPin, isStoreHydrated]);
 
   useEffect(() => {
+    if (!isStoreHydrated || !phoneNumber) return; // Wait for hydration and phone number
+
     if (params.newWallets) {
       try {
         const newlyAddedWallets: Wallet[] = JSON.parse(params.newWallets as string);
         console.log('WalletFolders - Processing newWallets param:', newlyAddedWallets);
 
         const addAndSave = async () => {
-          const updatedWallets = await storageAddWallets(newlyAddedWallets);
-          console.log('WalletFolders - New wallets added and saved to storage. Triggering re-render.');
-          setWallets(updatedWallets);
+          if (phoneNumber && (pin !== null || !hasPin)) {
+            const updatedWallets = await storageAddWallets(newlyAddedWallets, phoneNumber, pin || '');
+            console.log('WalletFolders - New wallets added and saved to storage. Triggering re-render.');
+            setWallets(updatedWallets);
+          }
         };
         addAndSave();
 
@@ -98,7 +146,7 @@ export default function Index() {
         console.error('WalletFolders - Error parsing new wallets from params:', e);
       }
     }
-  }, [params.newWallets]);
+  }, [params.newWallets, phoneNumber, pin, hasPin, isStoreHydrated]);
 
   const openAddWalletModal = () => setAddWalletModalVisible(true);
   const closeAddWalletModal = () => setAddWalletModalVisible(false);
@@ -116,7 +164,6 @@ export default function Index() {
   const handleRemoveWallet = async () => {
     if (!selectedWallet) return;
 
-    // Optional: Ask for confirmation before deleting
     Alert.alert(
       "Confirm Deletion",
       `Are you sure you want to remove ${selectedWallet.name} and its associated key phrases? This action cannot be undone.`,
@@ -124,18 +171,17 @@ export default function Index() {
         {
           text: "Cancel",
           style: "cancel",
-          onPress: () => closeWalletActionModal(), // Close modal on cancel
+          onPress: () => closeWalletActionModal(),
         },
         {
           text: "Delete",
           onPress: async () => {
             console.log('WalletFolders - Attempting to remove wallet:', selectedWallet.name);
 
-            // Step 1: Attempt to delete the file from the backend if fileId exists
             if (selectedWallet.fileId) {
               try {
                 const response = await fetch('https://k33p-backend.onrender.com/api/v1/vault/delete', {
-                  method: 'DELETE', // Use DELETE method as per API spec
+                  method: 'DELETE',
                   headers: {
                     'Content-Type': 'application/json',
                   },
@@ -150,26 +196,27 @@ export default function Index() {
                 } else {
                   console.error('WalletFolders - Failed to delete file from backend:', responseData.message || 'Unknown error');
                   Alert.alert('Error', `Failed to delete key phrases from backend: ${responseData.message || 'Please try again.'}`);
-                  // Decide if you want to proceed with local deletion even if backend fails
-                  // For now, we'll proceed with local deletion as the wallet should be removed from the app anyway.
                 }
               } catch (error) {
                 console.error('WalletFolders - Network or API error during file deletion:', error);
                 Alert.alert('Error', 'Network error or server unreachable during key phrase deletion. Please check your connection.');
-                // Proceed with local deletion
               }
             } else {
               console.log('WalletFolders - No fileId found for wallet, skipping backend deletion.');
             }
 
             // Step 2: Remove the wallet from local storage
-            const updatedWallets = wallets.filter(w => w.id !== selectedWallet.id);
-            setWallets(updatedWallets);
-            await storeWallets(updatedWallets); // Ensure removal is persisted locally
-            console.log('WalletFolders - Wallets after local removal and save:', updatedWallets);
+            if (phoneNumber && (pin !== null || !hasPin)) {
+                const updatedWallets = wallets.filter(w => w.id !== selectedWallet.id);
+                setWallets(updatedWallets);
+                await storeWallets(updatedWallets, phoneNumber, pin || '');
+                console.log('WalletFolders - Wallets after local removal and save:', updatedWallets);
+            } else {
+                console.warn('Phone number or PIN missing, cannot update stored wallets.');
+            }
             closeWalletActionModal();
           },
-          style: "destructive", // Make the Delete button red/warning color
+          style: "destructive",
         },
       ]
     );
@@ -178,6 +225,15 @@ export default function Index() {
   const walletRows = [];
   for (let i = 0; i < wallets.length; i += 2) {
     walletRows.push(wallets.slice(i, i + 2));
+  }
+
+  // Render a loading state if stores are not yet hydrated
+  if (!isStoreHydrated) {
+    return (
+      <View className="flex-1 bg-neutral800 justify-center items-center">
+        <Text className="text-white text-lg">Loading your session...</Text>
+      </View>
+    );
   }
 
   return (

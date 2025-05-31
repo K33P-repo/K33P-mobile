@@ -1,7 +1,8 @@
-import Button from '@/components/Button'
-import { useRouter } from 'expo-router'
-import React, { useRef, useState } from 'react'
+import Button from '@/components/Button';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Dimensions,
   FlatList,
   Image,
@@ -9,18 +10,22 @@ import {
   Pressable,
   Text,
   TouchableOpacity,
-  View
-} from 'react-native'
+  View,
+} from 'react-native';
 
-import SlideImg1 from '../../assets/images/carouselImage.png'
-import SlideImg3 from '../../assets/images/carouselImage2.png'
-import SlideImg2 from '../../assets/images/carouselImage3.png'
-import TopLeft from '../../assets/images/info.png'
-import ArrowLeft from '../../assets/images/left.png'
-import TopRight from '../../assets/images/person.png'
-import ArrowRight from '../../assets/images/right.png'
+import { usePhoneStore } from '@/store/usePhoneStore';
+import { usePinStore } from '@/store/usePinStore';
+import { getStoredWallets } from '@/utils/storage';
 
-const { width: screenWidth } = Dimensions.get('window')
+import SlideImg1 from '../../assets/images/carouselImage.png';
+import SlideImg3 from '../../assets/images/carouselImage2.png';
+import SlideImg2 from '../../assets/images/carouselImage3.png';
+import TopLeft from '../../assets/images/info.png';
+import ArrowLeft from '../../assets/images/left.png';
+import TopRight from '../../assets/images/person.png';
+import ArrowRight from '../../assets/images/right.png';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 const slides = [
   {
@@ -41,39 +46,99 @@ const slides = [
     label: 'How to get started with K33P?',
     headline: 'Deposit 2ADA, Create DID, Take back your 2ADA.',
   },
-]
+];
 
-const ITEM_WIDTH = screenWidth * 0.91
-const ITEM_SPACING = screenWidth * 0.02
+const ITEM_WIDTH = screenWidth * 0.91;
+const ITEM_SPACING = screenWidth * 0.02;
 
 export default function Index() {
-  const [current, setCurrent] = useState(0)
-  const [modalVisible, setModalVisible] = useState(false)
-  const router = useRouter()
-  const flatListRef = useRef(null)
+  const [current, setCurrent] = useState(0);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isStoreHydrated, setIsStoreHydrated] = useState(false);
+  const router = useRouter();
+  const flatListRef = useRef(null);
+
+  const { phoneNumber } = usePhoneStore();
+  const { pin, hasPin } = usePinStore();
+
+  useEffect(() => {
+    const unsubscribePin = usePinStore.persist.onFinishHydration(() => {
+      setIsStoreHydrated(true);
+    });
+
+    if (usePinStore.persist.hasHydrated()) {
+      setIsStoreHydrated(true);
+    }
+
+    return () => {
+      unsubscribePin();
+    };
+  }, []);
+
+  useEffect(() => {
+    const checkUserSessionAndWallets = async () => {
+      if (!isStoreHydrated) {
+        return;
+      }
+
+      if (!phoneNumber) {
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please sign in again.',
+          [{ text: 'OK', onPress: () => router.replace('/sign-in') }]
+        );
+        return;
+      }
+
+      if (hasPin && (pin === null || pin === undefined || pin === '')) {
+        Alert.alert(
+          'PIN Required',
+          'Your PIN is missing or invalid. Please set your PIN again.',
+          [{ text: 'OK', onPress: () => router.replace('/sign-in') }]
+        );
+        return;
+      }
+
+      const pinToUse = hasPin ? pin || '' : '';
+
+      if (phoneNumber && (pinToUse !== null || !hasPin)) {
+        try {
+          const storedWallets = await getStoredWallets(phoneNumber, pinToUse);
+          if (storedWallets.length > 0) {
+            router.replace('/(home)/add-to-wallet');
+          }
+        } catch (error) {
+          Alert.alert('Error', 'Failed to retrieve wallet data. Please try again.');
+          router.replace('/sign-in');
+        }
+      }
+    };
+
+    checkUserSessionAndWallets();
+  }, [isStoreHydrated, phoneNumber, pin, hasPin, router]);
 
   const onViewRef = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
-      setCurrent(viewableItems[0].index)
+      setCurrent(viewableItems[0].index);
     }
-  })
+  });
 
-  const viewConfigRef = useRef({ viewAreaCoveragePercentThreshold: 50 })
+  const viewConfigRef = useRef({ viewAreaCoveragePercentThreshold: 50 });
 
-  const prevSlide = () => {
-    const prevIndex = current === 0 ? slides.length - 1 : current - 1
-    flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true })
-  }
+  const prevSlide = useCallback(() => {
+    const prevIndex = current === 0 ? slides.length - 1 : current - 1;
+    flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
+  }, [current]);
 
-  const nextSlide = () => {
-    const nextIndex = current === slides.length - 1 ? 0 : current + 1
-    flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true })
-  }
+  const nextSlide = useCallback(() => {
+    const nextIndex = current === slides.length - 1 ? 0 : current + 1;
+    flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+  }, [current]);
 
-  const openModal = () => setModalVisible(true)
-  const closeModal = () => setModalVisible(false)
+  const openModal = useCallback(() => setModalVisible(true), []);
+  const closeModal = useCallback(() => setModalVisible(false), []);
 
-  const renderItem = ({ item, index }) => (
+  const renderItem = useCallback(({ item, index }) => (
     <View
       style={{
         width: ITEM_WIDTH,
@@ -113,11 +178,10 @@ export default function Index() {
         </Text>
       </View>
     </View>
-  )
+  ), [current]);
 
   return (
     <View className="flex-1 bg-neutral800 justify-between pt-6 pb-12 relative">
-      {/* Top Icons */}
       <View className="absolute top-10 left-4">
         <Image source={TopLeft} className="w-10 h-10" resizeMode="contain" />
       </View>
@@ -125,7 +189,6 @@ export default function Index() {
         <Image source={TopRight} className="w-10 h-10" resizeMode="contain" />
       </View>
 
-      {/* Carousel */}
       <View style={{ marginTop: 80 }}>
         <FlatList
           ref={flatListRef}
@@ -149,7 +212,6 @@ export default function Index() {
           pagingEnabled={false}
         />
 
-        {/* Arrows & Dots */}
         <View className="flex-row items-center justify-between px-4 mt-6">
           <TouchableOpacity onPress={prevSlide}>
             <Image source={ArrowLeft} />
@@ -172,7 +234,6 @@ export default function Index() {
         </View>
       </View>
 
-      {/* Bottom Buttons */}
       <View className="bg-mainBlack px-4 py-8 rounded-3xl space-y-4 mt-10">
         <View className="items-center mb-4">
           <Text className="text-white font-sora-semibold text-sm">Connect Wallet</Text>
@@ -180,7 +241,6 @@ export default function Index() {
         <Button text="Add New Wallet" onPress={openModal} />
       </View>
 
-      {/* Modal */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -197,15 +257,15 @@ export default function Index() {
               <Button
                 text="Scan Device"
                 onPress={() => {
-                  closeModal()
-                  router.push('/search')
+                  closeModal();
+                  router.push('/search');
                 }}
               />
               <Button
                 text="Add Manually"
                 onPress={() => {
-                  closeModal()
-                  router.push('/add-manually')
+                  closeModal();
+                  router.push('/add-manually');
                 }}
                 outline
               />
@@ -214,5 +274,5 @@ export default function Index() {
         </View>
       </Modal>
     </View>
-  )
+  );
 }

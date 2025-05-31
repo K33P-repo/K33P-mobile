@@ -50,8 +50,8 @@ export default function Biometrics() {
     },
   ]);
 
-  const [activeAuth, setActiveAuth] = useState(['Face Scan', 'Voice ID', 'PIN']);
-  const [inactiveAuth, setInactiveAuth] = useState(['Fingerprint', 'Iris Scan']);
+  const [activeAuth, setActiveAuth] = useState(['Phone Number', 'Fingerprint', 'PIN']);
+  const [inactiveAuth, setInactiveAuth] = useState(['Face I.D', 'Iris Scan']);
 
   const hasCompletedMethod = methods.some(method => method.isCompleted);
 

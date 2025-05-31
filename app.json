@@ -59,7 +59,13 @@
       ],
       "react-native-vision-camera",
       "expo-secure-store",
-      "expo-video"
+      "expo-video",
+      ["expo-camera",
+      {
+        "cameraPermission": "Allow K33P to access your camera",
+        "microphonePermission": "Allow K33P to access your microphone",
+        "recordAudioAndroid": true
+      }]
     ],
     "experiments": {
       "typedRoutes": true
