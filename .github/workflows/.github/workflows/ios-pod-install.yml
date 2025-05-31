@@ -1,0 +1,33 @@
+name: iOS Firebase Setup
+
+on:
+  workflow_dispatch:  # Allows you to manually trigger it
+
+jobs:
+  install-pods:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7  # CocoaPods works well with 2.7+
+
+      - name: Install CocoaPods
+        run: |
+          sudo gem install cocoapods
+
+      - name: Install Pods
+        working-directory: ios
+        run: pod install
+
+      - name: Upload Podfile.lock and Pods folder (optional)
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-pods
+          path: |
+            ios/Podfile.lock
+            ios/Pods/
