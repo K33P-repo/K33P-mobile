@@ -1,11 +1,11 @@
-// screens/(home)/view-key-phrases.tsx
-
 import { usePhoneStore } from '@/store/usePhoneStore';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Clipboard,
   Image,
   ScrollView,
   Text,
@@ -13,10 +13,15 @@ import {
   View
 } from 'react-native';
 
-import { decryptPhrases } from '@/utils/crypto'; // Ensure this utility is correct and available
+import { decryptPhrases } from '@/utils/crypto';
 import BackButton from '../../../assets/images/back.png';
+import CopyIcon from '../../../assets/images/Copy.png';
+import EyeClosedIcon from '../../../assets/images/eye-closed.png';
+import EyeIcon from '../../../assets/images/eye.png';
 import ArrowLeft from '../../../assets/images/left.png';
 import ArrowRight from '../../../assets/images/right.png';
+
+
 
 interface VaultRetrieveResponse {
   status: string;
@@ -33,10 +38,14 @@ export default function ViewKey() {
 
   const [phrases, setPhrases] = useState<string[]>([]);
   const [page, setPage] = useState<1 | 2>(1);
-  const [keyCount, setKeyCount] = useState<string>(''); // Will be '12' or '24'
-  const [walletName, setWalletName] = useState<string>('Wallet'); // To be derived from decrypted metadata
+  const [keyCount, setKeyCount] = useState<string>('');
+  const [displayedKeyType, setDisplayedKeyType] = useState<'12' | '24'>('12');
+  const [walletName, setWalletName] = useState<string>('Wallet');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConcealed, setIsConcealed] = useState<boolean>(true);
+  const [copiedFeedback, setCopiedFeedback] = useState<boolean>(false);
+
 
   const totalPages = keyCount === '12' ? 1 : 2;
   const isFirstPage = page === 1;
@@ -54,6 +63,11 @@ export default function ViewKey() {
     if (!phoneNumber) {
       setError('Phone number not available for decryption. Please log in.');
       setLoading(false);
+      Alert.alert(
+        "Session Expired",
+        "Your session has expired or phone number is missing. Please sign in again.",
+        [{ text: "OK", onPress: () => router.replace('/sign-in') }]
+      );
       return;
     }
 
@@ -61,7 +75,6 @@ export default function ViewKey() {
       setLoading(true);
       setError(null);
       try {
-        // Step 1: Retrieve encrypted string from backend using file_id
         const response = await fetch('https://k33p-backend.onrender.com/api/v1/vault/retrive', {
           method: 'POST',
           headers: {
@@ -75,10 +88,7 @@ export default function ViewKey() {
         if (response.ok && data.status === 'success') {
           const encryptedSeedPhrase = data.data.encrypted_seed_phrase;
 
-          // Step 2: Decrypt the phrases and metadata
           const SEPARATOR = '|||';
-          // Assuming the encrypted string is in the format "encryptedPhrases|||encryptedMeta"
-          // where encryptedMeta contains keyCount (e.g., '12' or '24') and walletName.
           const [encryptedPhrasesPart, encryptedMetaPart] = encryptedSeedPhrase.split(SEPARATOR);
 
           if (!encryptedPhrasesPart || !encryptedMetaPart) {
@@ -86,18 +96,18 @@ export default function ViewKey() {
           }
 
           const decryptedPhrasesString = await decryptPhrases(encryptedPhrasesPart, phoneNumber);
-          const phrasesArray = decryptedPhrasesString.split(SEPARATOR); // Split phrases by separator
+          const phrasesArray = decryptedPhrasesString.split(SEPARATOR);
 
           const decryptedMetaString = await decryptPhrases(encryptedMetaPart, phoneNumber);
-          const extractedKeyCount = decryptedMetaString.slice(0, 2); // First two chars are key count
-          const extractedWalletName = decryptedMetaString.slice(2); // Rest is wallet name
+          const extractedKeyCount = decryptedMetaString.slice(0, 2);
+          const extractedWalletName = decryptedMetaString.slice(2);
 
           setKeyCount(extractedKeyCount);
+          setDisplayedKeyType(extractedKeyCount as '12' | '24');
           setWalletName(extractedWalletName);
           setPhrases(phrasesArray);
           console.log('Successfully retrieved and decrypted phrases.');
         } else {
-          // Handle API errors (e.g., file_id not found)
           throw new Error(data.message || `API error: ${response.status}`);
         }
       } catch (err) {
@@ -110,12 +120,23 @@ export default function ViewKey() {
     };
 
     retrieveAndDecrypt();
-  }, [params.fileId, phoneNumber]); // Depend on fileId and phoneNumber
+  }, [params.fileId, phoneNumber, router]);
+
+  const handleKeyTypeSwitch = (type: '12' | '24') => {
+    if (type === '12' || (type === '24' && keyCount === '24')) {
+      setDisplayedKeyType(type);
+      setPage(1);
+    } else {
+      Alert.alert("Info", `This wallet has only ${keyCount} keys.`);
+    }
+  };
 
   const getStartEndIndex = () => {
-    if (keyCount === '12') {
+    const currentViewKeyType = displayedKeyType;
+
+    if (currentViewKeyType === '12' || keyCount === '12') {
       return [0, 12];
-    } else { // Assumed '24' if not '12'
+    } else {
       return page === 1 ? [0, 12] : [12, 24];
     }
   };
@@ -126,13 +147,30 @@ export default function ViewKey() {
     const boxes = [];
     for (let i = startIndex; i < endIndex; i += 2) {
       boxes.push(
-        <View key={`row-${i}`} className="flex-row justify-center mb-6">
+        <View key={`row-${i}`} className="flex-row justify-center mb-6 ">
           {[i, i + 1].map((index) => (
             <View
               key={`phrase-${index}`}
-              className="w-[45%] h-14 rounded-lg p-4 mx-2 justify-center items-center bg-white"
+              className="w-[45%] h-14 rounded-xl mx-2 justify-center items-center overflow-hidden border border-white/20 bg-white"
+              style={
+                isConcealed
+                  ? {
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(200px)',
+                      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
+                    }
+                  : {
+                      
+                    }
+              }
             >
-              <Text className="text-black font-sora">{phrases[index]}</Text>
+              <Text
+                className={`text-black font-sora text-base ${
+                  isConcealed ? 'opacity-5' : ''
+                }`}
+              >
+                {phrases[index]}
+              </Text>
             </View>
           ))}
         </View>
@@ -140,6 +178,17 @@ export default function ViewKey() {
     }
     return boxes;
   };
+  
+  const handleCopyPhrases = () => {
+    const [startIndex, endIndex] = getStartEndIndex();
+    const phrasesToCopy = phrases.slice(startIndex, endIndex).join(' ');
+    Clipboard.setString(phrasesToCopy);
+    setCopiedFeedback(true);
+    setTimeout(() => {
+      setCopiedFeedback(false);
+    }, 2000);
+  };
+
 
   if (loading) {
     return (
@@ -163,27 +212,93 @@ export default function ViewKey() {
 
   return (
     <View className="flex-1 bg-neutral800 px-5 pt-12">
-      {/* Header */}
       <View className="relative flex-row items-center justify-start mb-6">
         <TouchableOpacity className="z-10" onPress={() => router.back()}>
           <Image source={BackButton} className="w-10 h-10" resizeMode="contain" />
         </TouchableOpacity>
       </View>
 
-      {/* Wallet Name and Key Count */}
-      <Text className="text-white font-sora text-2xl mb-2">{walletName}</Text>
-      <Text className="text-neutral400 font-sora text-lg mb-6">{keyCount} Keys</Text>
+      <View className="flex-row mb-8 mt-3 bg-neutral700 rounded-xl">
+        <TouchableOpacity
+          className={`flex-1 py-3 rounded-xl ${
+            displayedKeyType === '12' ? 'bg-white' : ''
+          }`}
+          onPress={() => handleKeyTypeSwitch('12')}
+        >
+          <Text
+            className={`text-center font-sora ${
+              displayedKeyType === '12'
+                ? 'text-black font-sora-semibold'
+                : 'text-neutral200'
+            }`}
+          >
+            12 Keys
+          </Text>
+        </TouchableOpacity>
 
-      {/* Phrase Display */}
+        <TouchableOpacity
+          className={`flex-1 py-3 rounded-xl ${
+            displayedKeyType === '24' ? 'bg-white' : ''
+          }`}
+          onPress={() => handleKeyTypeSwitch('24')}
+          disabled={keyCount === '12'}
+        >
+          <Text
+            className={`text-center font-sora ${
+              displayedKeyType === '24'
+                ? 'text-black font-sora-semibold'
+                : 'text-neutral200'
+            }`}
+          >
+            24 Keys
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView className="my-5">
         <View className="bg-white/10 rounded-xl pt-4">
+          <View className="flex-row justify-between items-center px-4 pb-4">
+            <TouchableOpacity
+              onPress={() => setIsConcealed(!isConcealed)}
+              className="flex-row items-center mb-3 mt-2"
+            >
+              <Image
+                source={isConcealed ? EyeClosedIcon : EyeIcon}
+                className="mr-2"
+                resizeMode="contain"
+              />
+              <Text className="text-neutral200 font-sora text-xs">
+                {isConcealed ? 'Reveal' : 'Conceal'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleCopyPhrases}
+              className="flex-row items-center mb-3 mt-2"
+            >
+              {copiedFeedback ? (
+                <>
+                  <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
+                  <Text className="text-[#4CAF50] font-sora text-xs ml-2">Copied</Text>
+                </>
+              ) : (
+                <>
+                  <Image
+                    source={CopyIcon}
+                    className="mr-2"
+                    resizeMode="contain"
+                  />
+                  <Text className="text-neutral200 font-sora text-xs">Copy</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
           {phrases.length > 0 ? renderPhraseBoxes(start, end) : (
             <Text className="text-white text-center p-4">No phrases found for this wallet.</Text>
           )}
         </View>
 
-        {/* Page Navigation for 24 words */}
-        {keyCount === '24' && (
+        {displayedKeyType === '24' && (
           <View className="flex-row items-center justify-between mt-10 px-4">
             <TouchableOpacity onPress={() => setPage(1)} disabled={isFirstPage}>
               <Image source={ArrowLeft} style={{ opacity: isFirstPage ? 0.5 : 1 }} />

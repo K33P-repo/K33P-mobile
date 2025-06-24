@@ -50,8 +50,8 @@ export default function Biometrics() {
     },
   ]);
 
-  const [activeAuth, setActiveAuth] = useState(['Face Scan', 'Voice ID', 'PIN']);
-  const [inactiveAuth, setInactiveAuth] = useState(['Fingerprint', 'Iris Scan']);
+  const [activeAuth, setActiveAuth] = useState(['Phone Number', 'Fingerprint', 'PIN']);
+  const [inactiveAuth, setInactiveAuth] = useState(['Face I.D', 'Iris Scan']);
 
   const hasCompletedMethod = methods.some(method => method.isCompleted);
 
@@ -67,6 +67,18 @@ export default function Biometrics() {
     }
   }, [params.faceScanCompleted]);
 
+  useEffect(() => {
+    if (params.fingerprintCompleted === 'true') {
+      setMethods(prevMethods => {
+        if (prevMethods[1].isCompleted) return prevMethods;
+        return prevMethods.map(method =>
+          method.name === 'Fingerprint' ? { ...method, isCompleted: true } : method
+        );
+      });
+      setIsBiometric(true);
+    }
+  }, [params.fingerprintCompleted]);
+  
   const handleMethodPress = (route: string) => {
     setIsBiometric(true);
     router.push(route);

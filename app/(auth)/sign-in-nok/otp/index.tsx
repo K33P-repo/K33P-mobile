@@ -1,5 +1,6 @@
 import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
+import { usePhoneStore } from '@/store/usePhoneStore';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -78,12 +79,11 @@ export default function OTPEntryScreen() {
   const handleResend = () => {
     setTimer(120);
     setIsResendDisabled(true);
-    // Add your resend OTP logic here
   };
 
   const handleProceed = () => {
     if (isValid) {
-      router.push('/sign-in-nok/pinsetup');
+      router.push('/sign-in/pinsetup');
     }
   };
 
@@ -92,6 +92,9 @@ export default function OTPEntryScreen() {
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
+
+  const { formattedNumber } = usePhoneStore();
+
 
   return (
     <TouchableWithoutFeedback onPress={() => setShowKeypad(false)}>
@@ -114,7 +117,7 @@ export default function OTPEntryScreen() {
             Enter OTP
           </Text>
           <Text className="text-neutral200 font-sora text-sm text-center mb-8 px-8 py-2">
-            A 5-digit OTP has been sent to +234****78
+            A 5-digit OTP has been sent to {formattedNumber}
           </Text>
 
           {/* OTP Boxes */}

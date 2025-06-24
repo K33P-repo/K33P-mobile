@@ -1,0 +1,1 @@
+export const CARDANO_NETWORK = 'preprod'; 

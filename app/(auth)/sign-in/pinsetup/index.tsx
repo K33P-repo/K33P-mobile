@@ -1,7 +1,8 @@
 import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
+import { usePinStore } from '@/store/usePinStore'; // Import the store
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react'; // Import useEffect
 import {
   Image,
   Text,
@@ -14,13 +15,11 @@ import LockIcon from '../../../../assets/images/loginlock-2.png';
 
 export default function PinEntryScreen() {
   const router = useRouter();
+  const storedPin = usePinStore((state) => state.pin); // Get the stored PIN
   const [pin, setPin] = useState(['', '', '', '']);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isError, setIsError] = useState(false);
-  const [showKeypad, setShowKeypad] = useState(false);
-
-  // Mock PIN for development
-  const MOCK_PIN = '0000';
+  const [showKeypad, setShowKeypad] = useState(true); // Keypad should start visible
 
   const handleKeyPress = (num: string) => {
     if (currentIndex < 4) {
@@ -38,18 +37,29 @@ export default function PinEntryScreen() {
       setPin(newPin);
       setCurrentIndex(currentIndex - 1);
     }
-    setIsError(false);
+    setIsError(false); // Clear error on backspace
   };
+
+  // Use useEffect to trigger validation when PIN is complete
+  useEffect(() => {
+    const enteredPinComplete = pin.every(d => d !== '');
+    if (enteredPinComplete) {
+      handleSubmit(); // Automatically submit when all digits are entered
+    }
+  }, [pin]); // Depend on the 'pin' state
 
   const handleSubmit = () => {
     const enteredPin = pin.join('');
-    
-    if (enteredPin === MOCK_PIN) {
-      router.push('/sign-up/biometrics/fingerprint');
+
+    if (enteredPin === storedPin) { // Compare against the stored PIN
+      router.push('/sign-in/fingerprint'); // Navigate to next screen
     } else {
       setIsError(true);
-      setPin(['', '', '', '']);
-      setCurrentIndex(0);
+      setTimeout(() => { // Clear PIN and error after a short delay
+        setPin(['', '', '', '']);
+        setCurrentIndex(0);
+        setIsError(false);
+      }, 1000);
     }
   };
 
@@ -101,12 +111,12 @@ export default function PinEntryScreen() {
           </View>
         </View>
 
-        {/* Continue Button */}
+        {/* Continue Button (Disabled if PIN is not complete) */}
         <View className={`pb-8 ${showKeypad ? 'mb-80' : ''}`}>
           <Button
             text="Continue"
             onPress={handleSubmit}
-            isDisabled={pin.some(d => d === '')}
+            isDisabled={pin.some(d => d === '')} // Button disabled until all digits are entered
           />
         </View>
 

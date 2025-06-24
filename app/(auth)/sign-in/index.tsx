@@ -77,7 +77,15 @@ export default function PhoneEntryScreen() {
   };
 
   const showError = isTouched && !isValid && phoneNumber.length > 0; // Changed from rawPhoneNumber
-  const showNOKButton = !showKeypad && phoneNumber.length === 0; // Changed from rawPhoneNumber
+  const showNOKButton = !showKeypad  
+
+  useEffect(() => {
+    if (phoneNumber.length == 13) {
+      setIsValid(true);
+    } else {
+      setIsValid(false);
+    }
+  }, [phoneNumber]);
 
   return (
     <View className="flex-1 bg-neutral800 px-5 pt-12">
@@ -166,6 +174,8 @@ export default function PhoneEntryScreen() {
           <View className="absolute top-0 left-0 right-0 bottom-80" />
         </TouchableWithoutFeedback>
       )}
+
+
 
       {/* Custom Numeric Keypad */}
       <NumericKeypad
