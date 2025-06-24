@@ -1,18 +1,17 @@
 import Button from '@/components/Button';
+import { usePhoneStore } from '@/store/usePhoneStore';
+import { usePinStore } from '@/store/usePinStore';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Clipboard, Image, Modal, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import InputEndIcon from '../../../../assets/images//paste.png';
 import BackButton from '../../../../assets/images/back.png';
 import CopyIcon from '../../../../assets/images/Copy.png';
 import DidCreationImage1 from '../../../../assets/images/did_creation.png';
-import DidCreationImage2 from '../../../../assets/images/did_creation2.png';
-import DidCreationImage3 from '../../../../assets/images/did_creation3.png';
 import DidCreationImage4 from '../../../../assets/images/did_creation4.png';
 import Progress100 from '../../../../assets/images/progress100.png';
 import Progress30 from '../../../../assets/images/progress30.png';
-import Progress70 from '../../../../assets/images/progress70.png';
 import QRCodeImage from '../../../../assets/images/QR Code.png';
 import ScanBarcodeIcon from '../../../../assets/images/scan-barcode.png';
 import SuccessImage from '../../../../assets/images/success.png';
@@ -24,6 +23,14 @@ import OkxIcon from '../../../../assets/images/wallets/okx.png';
 import PhanthomIcon from '../../../../assets/images/wallets/phanthom.png';
 import VesprIcon from '../../../../assets/images/wallets/vespt.png';
 import ViewAll from '../../../../assets/images/wallets/view-all.png';
+
+const BASE_URL = 'https://k33p-backend-0kyx.onrender.com/api';
+
+const generateUserId = () => {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `user_${timestamp}_${random}`;
+};
 
 export default function DidScreen() {
   const router = useRouter();
@@ -38,6 +45,16 @@ export default function DidScreen() {
   const [progressText, setProgressText] = useState('DID creation in progress...');
   const [showProgress, setShowProgress] = useState(false);
   const [sendingAddress, setSendingAddress] = useState('');
+  const [txHash, setTxHash] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [refundStatus, setRefundStatus] = useState({
+    refunded: false,
+    txHash: '',
+  });
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { phoneNumber } = usePhoneStore();
+  const { pin } = usePinStore();
 
   const walletAddress = "addr_test1qquds2rqarqkk40lncfu88cwhptxekt7j0eccucpd2a43a35pel7jwkfmsf8zrjwsklm4czm5wqsgxwst5mrw86kt84qs7m4na"; 
 
@@ -55,61 +72,137 @@ export default function DidScreen() {
     { name: 'View All', icon: ViewAll }
   ];
 
-  useEffect(() => {
-    if (showConfirmationModal) {
-      const confirmationTimer = setTimeout(() => {
-        setShowConfirmationModal(false);
-        setShowWalletModal(false);
-        setShowSendAdaModal(false);
+  const handleSignup = async () => {
+    try {
+      setIsLoading(true);
+      const userId = generateUserId();
+      const biometricData = "static_biometric_data";
+
+      const payload = {
+        userAddress: walletAddress,
+        userId,
+        phoneNumber,
+        pin,
+        biometricData,
+        verificationMethod: "pin",
+        senderWalletAddress: sendingAddress
+      };
+
+      console.log("Signup payload:", payload);
+
+      const response = await fetch(`${BASE_URL}/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      console.log("Signup response:", data);
+
+      if (!data.success && data.message?.includes("User already exists")) {
+        alert("Account already exists with this user ID. Please log in or use a different user ID.");
+        return;
+      }
+
+      if (data.success && data.data?.verified === false && data.data?.message?.includes("Please send")) {
+          alert("Payment not yet detected. Please ensure you have sent exactly 2 ADA to the deposit address.");
+          return;
+      }
+
+      if (response.ok && data.success && data.data?.verified) {
+        console.warn("Proceeding with refund...");
+        setShowConfirmationModal(true);
         setShowProgress(true);
-        startProgressAnimation();
-      }, 5000);
-      return () => clearTimeout(confirmationTimer);
+        startPollingForRefund();
+
+        setTimeout(() => {
+          router.push('/sign-up/name');
+        }, 3000);
+      } else {
+        console.warn("Signup failed:", data);
+        alert("Signup failed. Please try again or contact support if the issue persists.");
+      }
+
+    } catch (error) {
+      console.error("Signup error:", error);
+      alert("Error processing signup. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  }, [showConfirmationModal]);
-
-  const startProgressAnimation = () => {
-    // Initial state (30%)
-    setCurrentDidImage(DidCreationImage2);
-    setCurrentProgressImage(Progress30);
-    setProgressText('DID creation in progress....Refund of Collateral will proceed after DID is created.');
-
-    // After 3 seconds (70%)
-    const timer70 = setTimeout(() => {
-      setCurrentDidImage(DidCreationImage3);
-      setCurrentProgressImage(Progress70);
-      setProgressText('DID creation in progress....Refund of Collateral will proceed after DID is created.');
-    }, 3000);
-
-    // After 6 seconds (100%)
-    const timer100 = setTimeout(() => {
-      setCurrentDidImage(DidCreationImage4);
-      setCurrentProgressImage(Progress100);
-      setProgressText('Refund of 2 ADA Collateral to the connected wallet is complete.');
-    }, 6000);
-
-    // After 9 seconds (redirect)
-    const redirectTimer = setTimeout(() => {
-      router.push('/sign-up/name');
-    }, 9000);
-
-    return () => {
-      clearTimeout(timer70);
-      clearTimeout(timer100);
-      clearTimeout(redirectTimer);
-    };
+};
+  
+  const startPollingForRefund = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+    
+    pollIntervalRef.current = setInterval(checkRefundStatus, 30000);
+    
+    checkRefundStatus();
   };
+
+  const checkRefundStatus = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/user/${sendingAddress}/status`);
+  
+      const data = await response.json();
+  
+      if (response.ok && data.success) {
+        const status = data.data;
+  
+        setRefundStatus({
+          refunded: status.refunded,
+          txHash: status.txHash || '',
+        });
+  
+        if (status.refunded) {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+  
+          setCurrentDidImage(DidCreationImage4);
+          setCurrentProgressImage(Progress100);
+          setProgressText('Refund of 2 ADA Collateral to the connected wallet is complete.');
+  
+          setTimeout(() => router.push('/sign-up/name'), 3000);
+        }
+      } else {
+        console.warn('Refund check failed:', data);
+      }
+    } catch (error) {
+      console.error('Error checking refund status:', error);
+    }
+  };
+  
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (showProgress) {
+      if (refundStatus.refunded) {
+        setProgressText('Refund of 2 ADA Collateral to the connected wallet is complete.');
+      } else {
+        setProgressText('DID creation in progress....Refund of Collateral will proceed after DID is created.');
+      }
+    }
+  }, [refundStatus, showProgress]);
 
   const handleProceed = () => {
     setShowSendAdaModal(true);
   };
 
-  const handleConnectWallet = (walletName: string) => {
+  const handleConnectWallet = (walletName) => {
     if (!acceptedPrivacy) return;
-/*     
-    setSelectedWallet(walletName);
-    setShowWalletModal(false);
- */    setShowSendAdaModal(true);
+    setShowSendAdaModal(true);
   };
 
   const handleCopyAddress = () => {
@@ -119,26 +212,22 @@ export default function DidScreen() {
   };
 
   const handleSendAda = () => {
-    setShowSendAdaModal(false);
-    setShowConfirmationModal(true);
+    handleSignup();
   };
 
   return (
     <View className="flex-1 bg-mainBlack px-5 pt-12">
-      {/* Header */}
       <View className="relative flex-row items-center justify-start mb-12">
         <TouchableOpacity className="z-10" onPress={() => router.back()}>
           <Image source={BackButton} className="w-10 h-10" resizeMode="contain" />
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
       <View className="flex-1">
         <Text className="text-white font-sora-bold text-sm mb-1">
           DID Creation / Vault Setup
         </Text>
 
-        {/* Verification items with checkmarks */}
         <View className="mt-2 mb-8">
           {['Mobile Number ', 'PIN Setup', 'Face ID'].map((item, index) => (
             <View key={index} className="flex-row items-center mb-3">
@@ -155,7 +244,6 @@ export default function DidScreen() {
           ))}
         </View>
 
-        {/* Additional text sections */}
         <Text className="text-white font-sora-bold text-sm mb-2">
           Vault Creation 
         </Text>
@@ -163,7 +251,6 @@ export default function DidScreen() {
           A collateral of 2 ADA is required to verify account on-chain & vault SetUp
         </Text>
 
-        {/* DID Creation Image */}
         <View className="items-center px-6 mb-4">
           <Image 
             source={currentDidImage} 
@@ -182,6 +269,21 @@ export default function DidScreen() {
             <Text className="text-main text-center font-sora text-sm">
               {progressText}
             </Text>
+            
+            {refundStatus.txHash && (
+              <Text className="text-green-500 mt-2 font-sora text-xs">
+                Refund TX: {refundStatus.txHash.slice(0, 12)}...{refundStatus.txHash.slice(-6)}
+              </Text>
+            )}
+            
+            {!refundStatus.refunded && (
+              <Button
+                text="Check Refund Status"
+                onPress={checkRefundStatus}
+                className="mt-4"
+                outline
+              />
+            )}
           </View>
         )}
       </View>
@@ -199,7 +301,6 @@ export default function DidScreen() {
         </View>
       )}
 
-      {/* Wallet Connection Modal */}
       <Modal
         visible={showWalletModal}
         animationType="slide"
@@ -214,7 +315,6 @@ export default function DidScreen() {
                   <View className="w-12 h-1 bg-neutral100 rounded-full" />
                 </TouchableOpacity>
                 
-                {/* Modal Header */}
                 <View className="flex-row justify-between items-center mb-6">
                   <TouchableOpacity onPress={() => setShowWalletModal(false)}>
                     <Image source={BackButton} className="w-10 h-10" resizeMode="contain" />
@@ -222,17 +322,15 @@ export default function DidScreen() {
                   <Text className="text-white font-sora-bold text-sm">
                     Connect Wallet
                   </Text>
-                  <TouchableOpacity onPress={() =>     setShowSendAdaModal(true)}>
+                  <TouchableOpacity onPress={() => setShowSendAdaModal(true)}>
                     <Image source={ScanBarcodeIcon} className="w-6 h-6" resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
 
-                {/* Choose Wallet Text */}
                 <Text className="text-neutral100 font-sora text-sm my-4">
                   Choose Wallet
                 </Text>
 
-                {/* Top Row Wallets - Horizontal */}
                 <View className="flex-row justify-between mb-4">
                   {topWallets.map((wallet, index) => (
                     <TouchableOpacity
@@ -252,12 +350,10 @@ export default function DidScreen() {
                   ))}
                 </View>
 
-                {/* Supported Wallets Text */}
                 <Text className="text-neutral100 font-sora text-sm my-4">
                   Install supported wallets
                 </Text>
 
-                {/* Bottom Row Wallets - Horizontal */}
                 <View className="flex-row justify-between mb-6">
                   {bottomWallets.map((wallet, index) => (
                     <TouchableOpacity
@@ -276,15 +372,12 @@ export default function DidScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
-
-               
               </View>
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Send ADA Modal */}
       <Modal
           visible={showSendAdaModal}
           animationType="slide"
@@ -332,7 +425,6 @@ export default function DidScreen() {
                     {walletAddress}
                   </Text>
 
-                  {/* Copy Button with Image */}
                   <TouchableOpacity 
                     className="flex-row items-center justify-center mb-8"
                     onPress={handleCopyAddress}
@@ -351,8 +443,7 @@ export default function DidScreen() {
                       {copied ? "Copied!" : "Copy"}
                     </Text>
                   </TouchableOpacity>
-
-                  {/* Input Field */}
+                  
                   <View className="mb-8 w-full mt-5">
                     <Text className="text-white font-sora text-sm mb-3">
                       Your sending address
@@ -361,7 +452,7 @@ export default function DidScreen() {
                       <TextInput
                         placeholder="Paste ADA address"
                         placeholderTextColor="#A0A0A0"
-                        className="flex-1 text-white font-sora text-sm"
+                        className="flex-1 text-white font-sora text-sm h-12"
                         value={sendingAddress}
                         onChangeText={setSendingAddress}
                       />
@@ -372,7 +463,7 @@ export default function DidScreen() {
                       />
                     </View>
                   </View>
-                   {/* Privacy Policy Checkbox */}
+                  
                 <View className="flex-row items-center mt-3 mb-4">
                   <TouchableOpacity 
                     onPress={() => setAcceptedPrivacy(!acceptedPrivacy)}
@@ -390,9 +481,9 @@ export default function DidScreen() {
                 </View>
 
                   <Button
-                    text="I have sent 2 ADA"
+                    text={isLoading ? "Processing..." : "I have sent 2 ADA"}
                     onPress={handleSendAda}
-                    isDisabled={!sendingAddress || !acceptedPrivacy}
+                    isDisabled={!sendingAddress || !acceptedPrivacy || isLoading}
                   />
                 </View>
               </TouchableWithoutFeedback>
@@ -401,7 +492,6 @@ export default function DidScreen() {
         </Modal>
 
 
-      {/* Confirmation Modal */}
       <Modal
         visible={showConfirmationModal}
         animationType="slide"
@@ -433,13 +523,15 @@ export default function DidScreen() {
                     Security Setup Done
                   </Text>
                   <Text className="text-neutral200 font-sora text-sm text-center">
-                    A collateral of 2 ADA is required to verify your account setup.
+                    {refundStatus.refunded
+                      ? "Refund processed successfully!"
+                      : "A collateral of 2 ADA is required to verify your account setup."}
                   </Text>
                 </View>
 
                 <View className="items-center px-6 my-16">
                   <Image 
-                    source={DidCreationImage2} 
+                    source={currentDidImage} 
                     className="w-full" 
                     resizeMode="contain" 
                   />
@@ -451,7 +543,7 @@ export default function DidScreen() {
                 </Text>
                 
                 <Button
-                  text="Please wait..."
+                  text={refundStatus.refunded ? "Redirecting..." : "Please wait..."}
                   onPress={() => {}}
                   outline
                 />

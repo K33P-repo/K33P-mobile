@@ -36,7 +36,12 @@ export default function Index() {
   const router = useRouter();
   const { phoneNumber } = usePhoneStore();
   const { pin, hasPin } = usePinStore(); // Get pin and hasPin
-
+/* 
+  useEffect(() => {
+    if(wallets.length === 0) {
+      router.replace('/(home)');
+    }
+  }) */
   // Monitor store hydration
   useEffect(() => {
     const unsubscribe = usePinStore.persist.onFinishHydration(() => {
@@ -365,7 +370,7 @@ export default function Index() {
 
       <View className="bg-mainBlack px-4 py-8 rounded-3xl space-y-4">
         <View className="items-center mb-4">
-          <Text className="text-white font-sora-semibold text-sm">Connect Wallet</Text>
+          <Text className="text-neutral200 font-sora-semibold text-sm">Connect</Text>
         </View>
         <Button
           text={wallets.length > 0 ? "Add Another Wallet" : "Add New Wallet"}

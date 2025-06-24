@@ -1,11 +1,11 @@
 import { usePhoneStore } from '@/store/usePhoneStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react'; // Ensure React and useState/useEffect are imported
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Clipboard,
   Image,
   ScrollView,
   Text,
@@ -20,6 +20,7 @@ import EyeClosedIcon from '../../../assets/images/eye-closed.png';
 import EyeIcon from '../../../assets/images/eye.png';
 import ArrowLeft from '../../../assets/images/left.png';
 import ArrowRight from '../../../assets/images/right.png';
+
 
 
 interface VaultRetrieveResponse {
@@ -42,7 +43,7 @@ export default function ViewKey() {
   const [walletName, setWalletName] = useState<string>('Wallet');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isConcealed, setIsConcealed] = useState<boolean>(true); // State for concealing/revealing phrases
+  const [isConcealed, setIsConcealed] = useState<boolean>(true);
   const [copiedFeedback, setCopiedFeedback] = useState<boolean>(false);
 
 
@@ -142,28 +143,34 @@ export default function ViewKey() {
 
   const [start, end] = getStartEndIndex();
 
-  // Updated renderPhraseBoxes to use a visual blur effect for text
   const renderPhraseBoxes = (startIndex: number, endIndex: number) => {
     const boxes = [];
     for (let i = startIndex; i < endIndex; i += 2) {
       boxes.push(
-        <View key={`row-${i}`} className="flex-row justify-center mb-6">
+        <View key={`row-${i}`} className="flex-row justify-center mb-6 ">
           {[i, i + 1].map((index) => (
             <View
               key={`phrase-${index}`}
-              className="w-[45%] h-14 rounded-lg p-4 mx-2 justify-center items-center bg-white"
+              className="w-[45%] h-14 rounded-xl mx-2 justify-center items-center overflow-hidden border border-white/20 bg-white"
+              style={
+                isConcealed
+                  ? {
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(200px)',
+                      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
+                    }
+                  : {
+                      
+                    }
+              }
             >
-              {isConcealed ? (
-                // Visually blur the text when concealed
-                <Text className="text-black font-sora text-base" style={{ opacity: 0.1 }}> {/* Adjust opacity for blur effect */}
-                  {phrases[index]}
-                </Text>
-              ) : (
-                // Display actual phrase when revealed
-                <Text className="text-black font-sora text-base">
-                  {phrases[index]}
-                </Text>
-              )}
+              <Text
+                className={`text-black font-sora text-base ${
+                  isConcealed ? 'opacity-5' : ''
+                }`}
+              >
+                {phrases[index]}
+              </Text>
             </View>
           ))}
         </View>
@@ -171,26 +178,15 @@ export default function ViewKey() {
     }
     return boxes;
   };
-
-
-  const handleCopyPhrases = async () => {
-    const phrasesToCopy = keyCount === '12'
-      ? phrases.slice(0, 12)
-      : phrases.slice(0, 24);
-
-    const fullPhraseString = phrasesToCopy.join(' ');
-
-    try {
-      await Clipboard.setStringAsync(fullPhraseString);
-      setCopiedFeedback(true);
-      setTimeout(() => {
-        setCopiedFeedback(false);
-      }, 1000);
-      Alert.alert("Copied!", "Seed phrase has been copied to clipboard.");
-    } catch (e) {
-      console.error("Failed to copy phrases:", e);
-      Alert.alert("Error", "Failed to copy seed phrase.");
-    }
+  
+  const handleCopyPhrases = () => {
+    const [startIndex, endIndex] = getStartEndIndex();
+    const phrasesToCopy = phrases.slice(startIndex, endIndex).join(' ');
+    Clipboard.setString(phrasesToCopy);
+    setCopiedFeedback(true);
+    setTimeout(() => {
+      setCopiedFeedback(false);
+    }, 2000);
   };
 
 
@@ -216,17 +212,12 @@ export default function ViewKey() {
 
   return (
     <View className="flex-1 bg-neutral800 px-5 pt-12">
-      {/* Header */}
       <View className="relative flex-row items-center justify-start mb-6">
         <TouchableOpacity className="z-10" onPress={() => router.back()}>
           <Image source={BackButton} className="w-10 h-10" resizeMode="contain" />
         </TouchableOpacity>
       </View>
 
-      {/* Wallet Name */}
-{/*       <Text className="text-white font-sora text-2xl mb-2">{walletName}</Text>
- */}
-      {/* Key Type Selector Tabs */}
       <View className="flex-row mb-8 mt-3 bg-neutral700 rounded-xl">
         <TouchableOpacity
           className={`flex-1 py-3 rounded-xl ${
@@ -264,11 +255,9 @@ export default function ViewKey() {
         </TouchableOpacity>
       </View>
 
-      {/* Phrase Display with Reveal/Copy Actions */}
       <ScrollView className="my-5">
         <View className="bg-white/10 rounded-xl pt-4">
           <View className="flex-row justify-between items-center px-4 pb-4">
-            {/* Eye/Reveal Section */}
             <TouchableOpacity
               onPress={() => setIsConcealed(!isConcealed)}
               className="flex-row items-center mb-3 mt-2"
@@ -283,7 +272,6 @@ export default function ViewKey() {
               </Text>
             </TouchableOpacity>
 
-            {/* Copy Section */}
             <TouchableOpacity
               onPress={handleCopyPhrases}
               className="flex-row items-center mb-3 mt-2"
@@ -310,7 +298,6 @@ export default function ViewKey() {
           )}
         </View>
 
-        {/* Page Navigation for 24 words */}
         {displayedKeyType === '24' && (
           <View className="flex-row items-center justify-between mt-10 px-4">
             <TouchableOpacity onPress={() => setPage(1)} disabled={isFirstPage}>

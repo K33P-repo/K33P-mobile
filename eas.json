@@ -5,8 +5,28 @@
         "distribution": "internal"
       },
       "preview": {
-        "distribution": "internal"
+        "distribution": "internal",
+        "android": {
+        "buildType": "apk"
+      }
       },
-      "production": {}
+      "preview2": {
+      "android": {
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
+    "preview3": {
+      "developmentClient": true
+    },
+      "production": {
+        "ios": {
+          "simulator": false,
+          "image": "latest", 
+          "env": {
+            "APP_ENV": "production"
+          }
+        }
+      }
+      }
     }
-  }
+  

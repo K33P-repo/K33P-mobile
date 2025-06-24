@@ -4,9 +4,12 @@
     "slug": "k33p-mobil",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/K33P.png",
+    "icon": "./assets/images/K33P.-small.png",
     "scheme": "k33pmobil",
     "userInterfaceStyle": "automatic",
+    "androidStatusBar": {
+      "backgroundColor": "#000000"
+    },
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/K33P.png",
@@ -24,9 +27,8 @@
       "minSdkVersion": 26,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FFFFFF"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.deepurple.k33pmobil"
     },
     "web": {
@@ -42,30 +44,20 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "cover",
-          "backgroundColor": "#0000"
-        }
-      ],
-      [
-        "expo-font",
-        {
-          "fonts": [
-            "../assets/fonts/Sora-Regular.ttf",
-            "../assets/fonts/Sora-SemiBold.ttf",
-            "../assets/fonts/Sora-Bold.ttf",
-            "../assets/fonts/SpaceMono-Regular.ttf",
-            "../assets/fonts/SpaceMono-Bold.ttf"
-          ]
+          "backgroundColor": "#000000"
         }
       ],
       "react-native-vision-camera",
       "expo-secure-store",
       "expo-video",
-      ["expo-camera",
-      {
-        "cameraPermission": "Allow K33P to access your camera",
-        "microphonePermission": "Allow K33P to access your microphone",
-        "recordAudioAndroid": true
-      }]
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow K33P to access your camera",
+          "microphonePermission": "Allow K33P to access your microphone",
+          "recordAudioAndroid": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

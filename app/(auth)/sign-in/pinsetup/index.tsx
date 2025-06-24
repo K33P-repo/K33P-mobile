@@ -52,7 +52,7 @@ export default function PinEntryScreen() {
     const enteredPin = pin.join('');
 
     if (enteredPin === storedPin) { // Compare against the stored PIN
-      router.push('/sign-up/biometrics/fingerprint'); // Navigate to next screen
+      router.push('/sign-in/fingerprint'); // Navigate to next screen
     } else {
       setIsError(true);
       setTimeout(() => { // Clear PIN and error after a short delay

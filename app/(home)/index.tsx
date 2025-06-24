@@ -212,7 +212,7 @@ export default function Index() {
           pagingEnabled={false}
         />
 
-        <View className="flex-row items-center justify-between px-4 mt-6">
+<View className="flex-row items-center justify-between px-6 mt-6">
           <TouchableOpacity onPress={prevSlide}>
             <Image source={ArrowLeft} />
           </TouchableOpacity>
@@ -234,9 +234,9 @@ export default function Index() {
         </View>
       </View>
 
-      <View className="bg-mainBlack px-4 py-8 rounded-3xl space-y-4 mt-10">
+      <View className="bg-mainBlack px-4 py-8 rounded-3xl space-y-4 mt-10 mx-3">
         <View className="items-center mb-4">
-          <Text className="text-white font-sora-semibold text-sm">Connect Wallet</Text>
+          <Text className="text-neutral200 font-sora-semibold text-sm">Connect</Text>
         </View>
         <Button text="Add New Wallet" onPress={openModal} />
       </View>

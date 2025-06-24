@@ -52,6 +52,14 @@ export default function PhoneEntryScreen() {
     }
   };
 
+  useEffect(() => {
+    if (phoneNumber.length == 13) {
+      setIsValid(true);
+    } else {
+      setIsValid(false);
+    }
+  }, [phoneNumber]);
+
   const handleBackspace = () => {
     const newNumber = phoneNumber.slice(0, -1); // Use the store value
     setPhoneNumber(newNumber); 
@@ -128,7 +136,7 @@ export default function PhoneEntryScreen() {
         <Button
           text="Proceed"
           onPress={handleProceed}
-          isDisabled={!isValid}
+          isDisabled={!isValid }
         />
       </View>
 
@@ -143,6 +151,8 @@ export default function PhoneEntryScreen() {
           <View className="absolute top-0 left-0 right-0 bottom-80" />
         </TouchableWithoutFeedback>
       )}
+
+      
 
       {/* Custom Numeric Keypad */}
       <NumericKeypad

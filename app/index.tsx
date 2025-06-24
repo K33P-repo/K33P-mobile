@@ -62,8 +62,7 @@ export default function Index() {
         }}
       >
         <Button text="Login" onPress={() => router.push('/sign-in')} outline />
-        <Button text="Create Account" onPress={() => router.push('/sign-up/biometrics/facescan')} />
-        <Button text="Home" onPress={() => router.push('/(home)')} />
+        <Button text="Create Account" onPress={() => router.push('/sign-up')} />
       </Animated.View>
     </SafeAreaView>
   );

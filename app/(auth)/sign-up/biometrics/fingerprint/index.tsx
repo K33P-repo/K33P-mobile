@@ -49,7 +49,7 @@ export default function Fingerprint() {
 
       if (result.success) {
         setCompletionPercentage(100);
-        router.push('/(home)');
+        router.push('/(auth)/sign-up/biometrics?fingerprintCompleted=true');
       } else {
         setCompletionPercentage(0);
         if (result.error === 'user_fallback') {
