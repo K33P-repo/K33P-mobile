@@ -17,7 +17,6 @@ export default function PhoneEntryScreen() {
     setFormattedNumber, 
   } = usePhoneStore();
 
-  // Get all store methods from auth store
   const { 
     setUserAuthMethods, 
     setUserId, 
@@ -33,27 +32,22 @@ export default function PhoneEntryScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Format phone number as +xxx-xxx-xxxx-xxx
   useEffect(() => {
     if (phoneNumber.length > 0) {
       let formatted = '+';
-      if (phoneNumber.length > 0) {
-        formatted += phoneNumber.substring(0, 3);
-      }
-      if (phoneNumber.length > 3) {
-        formatted += '-' + phoneNumber.substring(3, 6);
-      }
-      if (phoneNumber.length > 6) {
-        formatted += '-' + phoneNumber.substring(6, 10);
-      }
-      if (phoneNumber.length > 10) {
-        formatted += '-' + phoneNumber.substring(10, 13);
-      }
+      if (phoneNumber.length > 0) formatted += phoneNumber.substring(0, 3);
+      if (phoneNumber.length > 3) formatted += '-' + phoneNumber.substring(3, 6);
+      if (phoneNumber.length > 6) formatted += '-' + phoneNumber.substring(6, 10);
+      if (phoneNumber.length > 10) formatted += '-' + phoneNumber.substring(10, 13);
       setFormattedNumber(formatted);
     } else {
       setFormattedNumber('');
     }
   }, [phoneNumber, setFormattedNumber]);
+
+  useEffect(() => {
+    setIsValid(phoneNumber.length === 13);
+  }, [phoneNumber]);
 
   const handlePhoneChange = (text: string) => {
     const cleanedNumber = text.replace(/\D/g, '');
@@ -83,61 +77,46 @@ export default function PhoneEntryScreen() {
 
   const findUser = async (): Promise<boolean> => {
     try {
-      setIsLoading(true);
       setError(null);
-      
-      // Encrypt phone number for lookup using deterministic encryption
-      const phoneHash = encryptPhoneData(phoneNumber);
-      console.log('Encrypted phone number:', phoneHash);
-      
-      
-      console.log('Finding user with encrypted phone:', phoneHash.substring(0, 20) + '...');
-      
+
+      // Yield to UI thread before heavy crypto work
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const phoneHash = await encryptPhoneData(phoneNumber);
+      console.log('Encrypted phone number:', phoneHash.substring(0, 20) + '...');
+
+      // Yield again before network request
+      await new Promise(resolve => setTimeout(resolve, 0));
+
       const response = await fetch('https://k33p-backend-i9kj.onrender.com/api/zk/find-user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phoneHash: phoneHash
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneHash }),
       });
 
       const data = await response.json();
       console.log('Find user response:', data);
       
       if (data.success && data.data) {
-        // Store user data for later use in login
         const userData = data.data;
         
-        // Store auth methods for login comparison
         if (userData.authMethods && Array.isArray(userData.authMethods)) {
           setUserAuthMethods(userData.authMethods);
-          console.log('✅ Stored auth methods for login:', userData.authMethods.map((method: AuthMethod) => method.type));
+          console.log('✅ Stored auth methods:', userData.authMethods.map((m: AuthMethod) => m.type));
         }
-        
-        // Store other user data
-        if (userData.userId) {
-          setUserId(userData.userId);
-        }
-        
-        if (userData.walletAddress) {
-          setWalletAddress(userData.walletAddress);
-        }
-
-        // Store username if available in response
+        if (userData.userId) setUserId(userData.userId);
+        if (userData.walletAddress) setWalletAddress(userData.walletAddress);
         if (userData.username) {
           setUsername(userData.username);
           console.log('✅ Stored username:', userData.username);
         }
-        
+
         console.log('✅ User found:', {
           userId: userData.userId,
           authMethodsCount: userData.authMethods?.length,
           walletAddress: userData.walletAddress,
-          username: userData.username || 'Not provided'
         });
-        
+
         return true;
       } else {
         setError(data.error?.message || 'User not found');
@@ -152,52 +131,38 @@ export default function PhoneEntryScreen() {
     }
   };
 
-  const handleProceed = async () => {
-    if (!isValid) return;
-
-    const userFound = await findUser();
-    if (userFound) {
-      console.log('User found, proceeding to OTP:', formattedNumber);
-      router.push('/sign-in/otp');
-    } else {
-      console.log('User not found, showing error');
-    }
-  };
-
-  const handleNOK = () => {
-    console.log('Login as NOK');
-    //router.push('/sign-in-nok');
+  const handleProceed = () => {
+    if (!isValid || isLoading) return;
+  
+    setIsLoading(true);
+    setShowKeypad(false);
+  
+    setTimeout(async () => {
+      console.log('🔐 Finding user with phone:', formattedNumber);
+      const userFound = await findUser();
+      if (userFound) {
+        router.push('/sign-in/otp');
+      }
+    }, 100);
   };
 
   const showError = isTouched && !isValid && phoneNumber.length > 0;
-  const showNOKButton = !showKeypad;
-
-  useEffect(() => {
-    if (phoneNumber.length == 13) {
-      setIsValid(true);
-    } else {
-      setIsValid(false);
-    }
-  }, [phoneNumber]);
 
   return (
-    <View className="flex-1 px-5 ">
-      {/* Header */}
+    <View className="flex-1 px-5">
       <View className="relative flex-row items-center justify-start mb-12">
-      <TouchableOpacity className="z-10" onPress={() => router.back()}>
+        <TouchableOpacity className="z-10" onPress={() => router.back()} disabled={isLoading}>
           <BackIcon width={40} height={40} />
-
         </TouchableOpacity>
         <SIGN_IN_0 
-        style={{
-          position: 'absolute',
-          left: '50%',
-          transform: [{ translateX: '-50%' }]
-        }}
-      />
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: [{ translateX: '-50%' }]
+          }}
+        />
       </View>
 
-      {/* Content */}
       <View className="flex-1">
         <Text className="text-white font-sora text-sm mb-4">
           Enter Phone Number
@@ -205,6 +170,7 @@ export default function PhoneEntryScreen() {
 
         <TouchableOpacity
           activeOpacity={1}
+          disabled={isLoading}
           onPress={() => {
             setShowKeypad(true);
             Keyboard.dismiss();
@@ -213,12 +179,11 @@ export default function PhoneEntryScreen() {
         >
           <View pointerEvents="none">
             <TextInput
-              className={`rounded-lg px-5 py-3 mb-2 ${
-                error ? 'text-error500 border-error500' : 
-                showError ? 'text-error500 border-error500' : 'text-white border-neutral200'
-              } font-sora text-sm border ${
-                isFocused ? 'border-white' : 'border-neutral200'
-              }`}
+              className={`rounded-lg px-5 py-3 mb-2 font-sora text-sm border ${
+                error || showError
+                  ? 'text-error500 border-error500'
+                  : 'text-white border-neutral200'
+              } ${isFocused ? 'border-white' : ''}`}
               placeholder="+234-801-2345-678"
               placeholderTextColor="#969696"
               keyboardType="phone-pad"
@@ -226,6 +191,7 @@ export default function PhoneEntryScreen() {
               onChangeText={handlePhoneChange}
               maxLength={18}
               showSoftInputOnFocus={false}
+              editable={!isLoading}
               onFocus={() => {
                 setShowKeypad(true);
                 setIsFocused(true);
@@ -247,42 +213,29 @@ export default function PhoneEntryScreen() {
         )}
       </View>
 
-      {/* Footer */}
       <View className={`pb-5 ${showKeypad ? 'mb-80' : 'mb-14'}`}>
         <Button
           text={isLoading ? "Finding User..." : "Proceed"}
           onPress={handleProceed}
           isDisabled={!isValid || isLoading}
         />
-{/* 
-        {showNOKButton && (
-          <View className='mt-5 mb-8'>
-            <Button
-              text="Login as NOK"
-              onPress={handleNOK}
-              outline
-            />
-          </View>
-        )} */}
       </View>
 
-      {/* Dismiss Keypad Overlay */}
-      {showKeypad && (
+      {showKeypad && !isLoading && (
         <TouchableWithoutFeedback
           onPress={() => {
             setShowKeypad(false);
             setIsFocused(false);
           }}
         >
-          <View className="absolute top-0 left-0 right-0 bottom-80"  style={{ bottom: 400 }} />
+          <View className="absolute top-0 left-0 right-0 bg-transparent" style={{ bottom: 400 }} />
         </TouchableWithoutFeedback>
       )}
 
-      {/* Custom Numeric Keypad */}
       <NumericKeypad
         onKeyPress={handleKeyPress}
         onBackspace={handleBackspace}
-        isVisible={showKeypad}
+        isVisible={showKeypad && !isLoading}
       />
     </View>
   );

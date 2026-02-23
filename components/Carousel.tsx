@@ -72,7 +72,7 @@ const Carousel: React.FC<CarouselProps> = ({
   const [current, setCurrent] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  const onViewRef = useRef(({ viewableItems }) => {
+  const onViewRef = useRef(({ viewableItems }: { viewableItems: any[] }) => {
     if (viewableItems.length > 0) {
       setCurrent(viewableItems[0].index);
     }
@@ -96,7 +96,7 @@ const Carousel: React.FC<CarouselProps> = ({
     }
   }, [onSlidePress]);
 
-  const renderItem = useCallback(({ item, index }) => (
+  const renderItem = useCallback(({ item, index }: { item: Slide; index: number }) => (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => handleSlidePress(item)}
@@ -109,6 +109,7 @@ const Carousel: React.FC<CarouselProps> = ({
         flexDirection: 'row',
         alignItems: 'center',
         opacity: index === current ? 1 : 0.6,
+        marginLeft: index === 0 ? -ITEM_SPACING : 0
       }}
     >
       <Image
@@ -186,7 +187,8 @@ const Carousel: React.FC<CarouselProps> = ({
                 height: 8,
                 borderRadius: 8,
                 backgroundColor: index === current ? '#FFD939' : '#666',
-                transition: 'width 0.25s ease-in-out',
+                // NOTE: 'transition' is not valid in React Native — dot size
+                // switches instantly, which matches the original behaviour.
               }}
             />
           ))}

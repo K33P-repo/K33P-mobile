@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "k33p-mobil",
+    "name": "K33P",
     "slug": "k33p-rfybgrpivl35ryvivxjcp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -27,7 +27,8 @@
       "minSdkVersion": 26,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#FFFFFF",
+        "softwareKeyboardLayoutMode": "resize"
       },
       "package": "com.deepurple.k33pmobil",
       "permissions": [
@@ -60,7 +61,8 @@
           "microphonePermission": "Allow K33P to access your microphone",
           "recordAudioAndroid": true
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

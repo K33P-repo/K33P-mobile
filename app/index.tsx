@@ -92,5 +92,6 @@ export default function Index() {
         <Button text="Create Account" onPress={() => router.push('/sign-up')} />
       </Animated.View>
     </View>
+
   );
 }

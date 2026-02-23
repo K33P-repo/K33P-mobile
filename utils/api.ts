@@ -1,8 +1,8 @@
 // utils/api.ts
 import { useAuthStore } from '@/store/useAuthMethod';
-import { encryptPhoneData } from '@/utils/phoneEncyption';
-import { encryptPinData } from '@/utils/pinEncryption';
+import { encryptPhoneData } from './phoneEncyption';
 import { fullFolderCleanup, getWalletFolders } from './wallet-api';
+import { hashPin } from './pinEncryption';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://k33p-backend-i9kj.onrender.com/api';
 
@@ -202,6 +202,8 @@ export async function signupUser(signupData: {
   zkProof: any;
   verificationMethod: string;
 }) {
+  console.log('Signup data:', signupData);
+  
   const response = await makePublicRequest('POST', '/auth/signup', signupData);
   
   if (response.status === 200 && response.body) {
@@ -457,14 +459,20 @@ export async function updateUsername(username: string): Promise<{
 }
 
 // Helper function to create auth methods
-export function createAuthMethods(phoneNumber: string, pin: string, userId: string) {
-  const phoneHash = encryptPhoneData(phoneNumber);
-  const pinHash = encryptPinData(pin, userId);
+export async function createAuthMethods(phoneNumber: string, pin: string, userId: string) {
+  const encryptedPhone = await encryptPhoneData(phoneNumber);
+  console.log(encryptedPhone);
+  
+  console.log('Phone encrypted successfully');
+  
+  // Hash PIN using PBKDF2 (one-way hash for storage)
+  const hashedPin = await hashPin(pin, userId);
+  console.log('PIN hashed successfully');
   
   return [
     {
       type: 'pin',
-      data: pinHash,
+      data: hashedPin,
       createdAt: new Date().toISOString(),
       lastUsed: new Date().toISOString()
     },
@@ -475,7 +483,7 @@ export function createAuthMethods(phoneNumber: string, pin: string, userId: stri
     },
     {
       type: 'phone',
-      data: phoneHash,
+      data: encryptedPhone,
       createdAt: new Date().toISOString(),
       lastUsed: new Date().toISOString()
     }

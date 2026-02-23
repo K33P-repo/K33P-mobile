@@ -3,7 +3,7 @@ import Carousel, { Slide } from '@/components/Carousel';
 import { useAuthStore } from '@/store/useAuthMethod';
 import { getUsername, isTokenExpired } from '@/utils/api'; // Import getUsername
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -19,6 +19,7 @@ import { usePinStore } from '@/store/usePinStore';
 import { createFolder, getWalletFolders } from '@/utils/wallet-api';
 
 import { INFO, PROFILE } from '@/assets/images/svg';
+import DraggableBottomSheet, { DraggableBottomSheetRef } from '@/components/Draggablebottomsheet';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -36,7 +37,8 @@ export default function Index() {
   const [defaultFolderId, setDefaultFolderId] = useState<string | null>(null);
   const [isFetchingUsername, setIsFetchingUsername] = useState(false);
   const [scanDeviceMessage, setScanDeviceMessage] = useState(false); // State for scan device message
-  
+  const carouselSheetRef = useRef<DraggableBottomSheetRef>(null);
+
   const router = useRouter();
   const { username, token, clearAuthData, setUsername } = useAuthStore();
 
@@ -216,12 +218,11 @@ export default function Index() {
 
   const openCarouselModal = useCallback((item: Slide) => {
     setSelectedSlide(item);
-    setCarouselModalVisible(true);
+    setTimeout(() => carouselSheetRef.current?.open(), 0);  // ← actually opens the sheet
   }, []);
-
+  
   const closeCarouselModal = useCallback(() => {
-    setCarouselModalVisible(false);
-    setSelectedSlide(null);
+    carouselSheetRef.current?.close();  // ← actually closes the sheet
   }, []);
 
   useEffect(() => {
@@ -389,34 +390,31 @@ export default function Index() {
         </View>
       </Modal>
 
-      {/* Carousel Item Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={carouselModalVisible}
-        onRequestClose={closeCarouselModal}
-      >
-        <Pressable 
-          onPress={closeCarouselModal} 
-          className="absolute inset-0 bg-black/80"
-        />
-        <View className="absolute bottom-0 w-full bg-mainBlack rounded-t-3xl" style={{ height: '70%' }}>
+       {/* ── Carousel Item — DraggableBottomSheet (drag to close) ── */}
+       <DraggableBottomSheet
+          ref={carouselSheetRef}
+          snapHeight="70%"
+          backgroundColor="#111111"
+          onClose={() => setSelectedSlide(null)}
+        >
           {selectedSlide && (
             <>
               <Image
                 source={selectedSlide.modalImage}
-                className="w-full object-cover rounded-t-3xl"
+                className="w-full h-[30%] object-cover rounded-t-3xl"
               />
-              <View className="px-4 py-6">
+              <View className="px-6 py-4">
                 <Text className="text-neutral100 font-space-mono text-sm mb-2">
                   {selectedSlide.label}
                 </Text>
-               
-                <Text className="text-white font-sora text-sm">
+                <Text className="text-white font-sora-bold text-lg mb-2">
+                  {selectedSlide.headline}
+                </Text>
+                <Text className="text-neutral200 font-sora text-sm">
                   {selectedSlide.description}
                 </Text>
               </View>
-              <View className="absolute bottom-16 left-0 right-0 px-4">
+              <View className="absolute bottom-16 left-0 right-0 px-6">
                 <Button 
                   text="Close" 
                   onPress={closeCarouselModal}
@@ -425,8 +423,7 @@ export default function Index() {
               </View>
             </>
           )}
-        </View>
-      </Modal>
+        </DraggableBottomSheet>
     </View>
   );
 }

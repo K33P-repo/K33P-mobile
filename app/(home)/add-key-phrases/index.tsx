@@ -37,6 +37,9 @@ export default function AddKey() {
   const scrollPositionRef = useRef(0);
   const screenHeightRef = useRef(0);
 
+  // NEW: Track whether "Done" has been clicked (form is submitted/locked)
+  const [isDoneClicked, setIsDoneClicked] = useState(false);
+
   // Get the wallet and folder IDs from params
   const walletId = params.walletId as string;
   const walletFolderId = params.walletFolderId as string;
@@ -78,8 +81,6 @@ export default function AddKey() {
       hideSub.remove();
     };
   }, []);
-  
-  
 
   // Track scroll position when keyboard is not visible
   const handleScroll = useCallback((event: any) => {
@@ -87,8 +88,13 @@ export default function AddKey() {
       scrollPositionRef.current = event.nativeEvent.contentOffset.y;
     }
   }, [keyboardVisible]);
+
   const [inputPositions, setInputPositions] = useState<number[]>(Array(24).fill(0));
+
   const handlePhraseChange = (text: string, index: number) => {
+    // Prevent any change if "Done" was clicked
+    if (isDoneClicked) return;
+
     if (index === 0 && text.includes(' ')) {
       const splitPhrases = text.trim().split(/\s+/);
       const limit = selectedKeyType === '12' ? 12 : 24;
@@ -105,6 +111,12 @@ export default function AddKey() {
   };
 
   const handleFocus = (index: number) => {
+    // Prevent focus if locked
+    if (isDoneClicked) {
+      Keyboard.dismiss();
+      return;
+    }
+
     setFocusedInput(index);
   
     requestAnimationFrame(() => {
@@ -135,8 +147,6 @@ export default function AddKey() {
       );
     });
   };
-  
-  
 
   const renderPhraseInputs = (start: number, end: number) => {
     const inputs = [];
@@ -145,17 +155,16 @@ export default function AddKey() {
         <View key={`row-${i}`} className="flex-row justify-center mb-6">
           {[i, i + 1].map(index => (
             <View
-            ref={el => (inputRefs.current[index] = el)}
-            onLayout={(event) => {
-              const layout = event.nativeEvent.layout;
-              setInputPositions(prev => {
-                if (prev[index] === layout.y) return prev;
-                const next = [...prev];
-                next[index] = layout.y;
-                return next;
-              });
-              
-            }}
+              ref={el => (inputRefs.current[index] = el)}
+              onLayout={(event) => {
+                const layout = event.nativeEvent.layout;
+                setInputPositions(prev => {
+                  if (prev[index] === layout.y) return prev;
+                  const next = [...prev];
+                  next[index] = layout.y;
+                  return next;
+                });
+              }}
               key={`input-wrapper-${index}`}
               className="w-[45%] mx-2"
             >
@@ -164,7 +173,7 @@ export default function AddKey() {
                   focusedInput === index || phrases[index]
                     ? 'bg-white text-black'
                     : 'bg-neutral300 text-neutral50'
-                }`}
+                } ${isDoneClicked ? 'bg-gray-200 text-gray-500' : ''}`}
                 placeholder={`Phrase ${index + 1}`}
                 placeholderTextColor="#B0B0B0"
                 value={phrases[index]}
@@ -174,6 +183,8 @@ export default function AddKey() {
                 keyboardAppearance="dark"
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!isDoneClicked}           // ← NEW: disable editing after Done
+                selectTextOnFocus={!isDoneClicked}  // ← prevent selection too
               />
             </View>
           ))}
@@ -183,23 +194,33 @@ export default function AddKey() {
     return inputs;
   };
 
-  const goToPrevPage = useCallback(() => {
-    setPage(prev => {
-      if (prev <= 1) return prev;
-      mainScrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      scrollPositionRef.current = 0;
-      return (prev - 1) as 1 | 2;
+  const goToPrevPage = () => {
+    if (page <= 1 || isDoneClicked) return; // ← disable navigation after Done
+    
+    Keyboard.dismiss();
+    setPage((prev) => {
+      const newPage = (prev - 1) as 1 | 2;
+      setTimeout(() => {
+        mainScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        scrollPositionRef.current = 0;
+      }, 100);
+      return newPage;
     });
-  }, []);
+  };
 
-  const goToNextPage = useCallback(() => {
-    setPage(prev => {
-      if (prev >= totalPages) return prev;
-      mainScrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      scrollPositionRef.current = 0;
-      return (prev + 1) as 1 | 2;
+  const goToNextPage = () => {
+    if (page >= totalPages || isDoneClicked) return; // ← disable navigation after Done
+    
+    Keyboard.dismiss();
+    setPage((prev) => {
+      const newPage = (prev + 1) as 1 | 2;
+      setTimeout(() => {
+        mainScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        scrollPositionRef.current = 0;
+      }, 100);
+      return newPage;
     });
-  }, [totalPages]);
+  };
 
   const getStartEndIndex = () => {
     if (selectedKeyType === '12') return [0, 12];
@@ -214,6 +235,9 @@ export default function AddKey() {
       : phrases.slice(0, 24).every(p => p.trim() !== '');
 
   const handleSaveKeyPhrases = async () => {
+    // Lock the form immediately on click
+    setIsDoneClicked(true);
+
     try {
       setIsLoading(true);
       
@@ -299,6 +323,8 @@ export default function AddKey() {
         'Error', 
         err.message || 'Failed to save wallet. Please try again.'
       );
+      // If error, allow retry (unlock form)
+      setIsDoneClicked(false);
     } finally {
       setIsLoading(false);
     }
@@ -329,39 +355,45 @@ export default function AddKey() {
               </TouchableOpacity>
             </View>
 
-
-            <View className="flex-row mb-2 mt-3">
+            {/* Key type switcher – disabled after Done */}
+            <View className="flex-row mb-2 mt-3 opacity-100">
               <TouchableOpacity
-                className={`flex-1 py-3 rounded-xl ${selectedKeyType === '12' ? 'bg-white' : ''}`}
+                className={`flex-1 py-3 rounded-xl ${selectedKeyType === '12' ? 'bg-white' : ''}
+                }`}
                 onPress={() => {
+                  if (isDoneClicked) return; // ← prevent change
                   setSelectedKeyType('12');
                   setPage(1);
                   scrollPositionRef.current = 0;
                   mainScrollViewRef.current?.scrollTo({ y: 0, animated: true });
                 }}
+                disabled={isDoneClicked} // ← disable touch
               >
                 <Text
                   className={`text-center font-sora ${
                     selectedKeyType === '12' ? 'text-black font-sora-semibold' : 'text-neutral200'
-                  }`}
+                  } ${isDoneClicked ? 'text-gray-500' : ''}`}
                 >
                   12 Keys
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                className={`flex-1 py-3 rounded-xl ${selectedKeyType === '24' ? 'bg-white' : ''}`}
+                className={`flex-1 py-3 rounded-xl ${selectedKeyType === '24' ? 'bg-white' : ''} 
+                }`}
                 onPress={() => {
+                  if (isDoneClicked) return; // ← prevent change
                   setSelectedKeyType('24');
                   setPage(1);
                   scrollPositionRef.current = 0;
                   mainScrollViewRef.current?.scrollTo({ y: 0, animated: true });
                 }}
+                disabled={isDoneClicked} // ← disable touch
               >
                 <Text
                   className={`text-center font-sora ${
                     selectedKeyType === '24' ? 'text-black font-sora-semibold' : 'text-neutral200'
-                  }`}
+                  } `}
                 >
                   24 Keys
                 </Text>
@@ -374,8 +406,16 @@ export default function AddKey() {
             
             {selectedKeyType === '24' && (
               <View className="flex-row items-center justify-between mt-2 px-4 mb-4">
-                <TouchableOpacity onPress={goToPrevPage} disabled={isFirstPage}>
-                  <Image source={ArrowLeft} style={{ opacity: isFirstPage ? 0.5 : 1 }} />
+                <TouchableOpacity 
+                  onPress={goToPrevPage} 
+                  disabled={isFirstPage || isDoneClicked}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                >
+                  <Image 
+                    source={ArrowLeft} 
+                    style={{ opacity: isFirstPage || isDoneClicked ? 0.5 : 1 }} 
+                  />
                 </TouchableOpacity>
 
                 <View className="flex-row gap-3 items-center">
@@ -389,8 +429,16 @@ export default function AddKey() {
                   ))}
                 </View>
 
-                <TouchableOpacity onPress={goToNextPage} disabled={isLastPage}>
-                  <Image source={ArrowRight} style={{ opacity: isLastPage ? 0.5 : 1 }} />
+                <TouchableOpacity 
+                  onPress={goToNextPage} 
+                  disabled={isLastPage || isDoneClicked}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                >
+                  <Image 
+                    source={ArrowRight} 
+                    style={{ opacity: isLastPage || isDoneClicked ? 0.5 : 1 }} 
+                  />
                 </TouchableOpacity>
               </View>
             )}
@@ -400,7 +448,6 @@ export default function AddKey() {
                 text="Done"
                 onPress={handleSaveKeyPhrases}
                 isLoading={isLoading}
-                isDisabled={!allPhrasesFilled}
               />
             </View>
           </View>

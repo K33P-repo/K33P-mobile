@@ -1,4 +1,4 @@
-// PaymentHelpScreen.tsx
+// LightpaperHelpScreen.tsx
 import Button from '@/components/Button';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -51,7 +51,7 @@ const highlightText = (text: string, query: string): JSX.Element => {
   );
 };
 
-// ─── Isolated card component (same as in Account) ─────────────────────────────
+// ─── Reusable isolated card (same as Account & Payment) ───────────────────────
 const SearchResultCard = React.memo(
   ({
     item,
@@ -73,21 +73,16 @@ const SearchResultCard = React.memo(
         overflow: 'hidden',
       }}
     >
-      {/* Tappable header */}
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => onPress(item.route)}
-        style={{
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-        }}
+        style={{ paddingHorizontal: 16, paddingVertical: 12 }}
       >
         <Text className="text-neutral100 font-space-mono text-xs">
           About K33P {item.title}
         </Text>
       </TouchableOpacity>
 
-      {/* ScrollView instead of nested FlatList */}
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -107,8 +102,8 @@ const SearchResultCard = React.memo(
 
 SearchResultCard.displayName = 'SearchResultCard';
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
-export default function PaymentHelpScreen() {
+// ─── Main component ───────────────────────────────────────────────────────────
+export default function LightpaperHelpScreen() {
   const router = useRouter();
   const [searchCurrent, setSearchCurrent] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,7 +113,9 @@ export default function PaymentHelpScreen() {
   const searchFlatListRef = useRef<FlatList>(null);
   const searchInputRef = useRef<TextInput>(null);
 
-  const paymentContent = helpContent.helpSections.find((section) => section.section === 'Payment');
+  const lightpaperContent = helpContent.helpSections.find(
+    (section) => section.section === 'Lightpaper'
+  );
   const supportPhoneNumber = helpContent.support.phoneNumber;
 
   const searchResults = useMemo(() => {
@@ -167,15 +164,14 @@ export default function PaymentHelpScreen() {
       }
     });
 
-    // Prioritize Payment section first
+    // Prioritize Lightpaper section
     return results.sort((a, b) => {
-      if (a.section === 'Payment') return -1;
-      if (b.section === 'Payment') return 1;
+      if (a.section === 'Lightpaper') return -1;
+      if (b.section === 'Lightpaper') return 1;
       return 0;
     });
   }, [searchQuery]);
 
-  // Reset to first card when results change
   useEffect(() => {
     setSearchCurrent(0);
   }, [searchResults]);
@@ -209,7 +205,7 @@ export default function PaymentHelpScreen() {
     [searchCurrent, navigateToSearchResult]
   );
 
-  const renderPaymentContentItem = useCallback(({ item }: { item: any }) => (
+  const renderLightpaperContentItem = useCallback(({ item }: { item: any }) => (
     <View className="mb-6">
       {item.heading && (
         <Text className="text-main font-sora-bold text-sm mb-4 underline">
@@ -222,7 +218,7 @@ export default function PaymentHelpScreen() {
     </View>
   ), []);
 
-  if (!paymentContent) {
+  if (!lightpaperContent) {
     return (
       <View className="flex-1 justify-center items-center">
         <Text className="text-white">Content not found</Text>
@@ -258,7 +254,7 @@ export default function PaymentHelpScreen() {
 
         <View className="items-center justify-center">
           <Text className="text-sm text-white font-sora-bold mt-3">
-            {paymentContent.title}
+            {lightpaperContent.title}
           </Text>
         </View>
 
@@ -283,7 +279,7 @@ export default function PaymentHelpScreen() {
         </View>
       </View>
 
-      {/* Content */}
+      {/* Main content area */}
       {searchQuery ? (
         searchResults.length > 0 ? (
           <View className="flex-1">
@@ -291,7 +287,7 @@ export default function PaymentHelpScreen() {
               ref={searchFlatListRef}
               data={searchResults}
               horizontal
-              scrollEnabled={false} // ← Key: only arrows move horizontally
+              scrollEnabled={false}
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => `search-${item.section}-${item.id}`}
               renderItem={renderSearchResultItem}
@@ -361,12 +357,12 @@ export default function PaymentHelpScreen() {
         <View className="flex-1 px-4">
           <View className="mt-4 p-4 rounded-lg bg-[#222222] flex-1">
             <Text className="text-neutral100 text-xs font-space-mono mb-4">
-              About K33P Payment
+              About K33P Lightpaper
             </Text>
             <FlatList
-              data={paymentContent.content}
-              keyExtractor={(item) => `payment-${item.id}`}
-              renderItem={renderPaymentContentItem}
+              data={lightpaperContent.content}
+              keyExtractor={(item) => `lightpaper-${item.id}`}
+              renderItem={renderLightpaperContentItem}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 20 }}
               keyboardShouldPersistTaps="always"

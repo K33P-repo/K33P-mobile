@@ -1,6 +1,8 @@
 import { usePhoneStore } from '@/store/usePhoneStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -100,7 +102,6 @@ export default function ViewKey() {
           const extractedWalletName = decryptedMetaString.slice(2);
 
           setKeyCount(extractedKeyCount);
-          // Set displayedKeyType to match the actual key count
           setDisplayedKeyType(extractedKeyCount as '12' | '24');
           setWalletName(extractedWalletName);
           setPhrases(phrasesArray);
@@ -120,13 +121,11 @@ export default function ViewKey() {
     retrieveAndDecrypt();
   }, [params.fileId, phoneNumber, router]);
 
-  // Only allow switching to tabs that match the actual key count
   const handleKeyTypeSwitch = (type: '12' | '24') => {
     if (type === keyCount) {
       setDisplayedKeyType(type);
       setPage(1);
     }
-    // If user tries to switch to a tab that doesn't match keyCount, do nothing
   };
 
   const getStartEndIndex = () => {
@@ -145,31 +144,71 @@ export default function ViewKey() {
     const boxes = [];
     for (let i = startIndex; i < endIndex; i += 2) {
       boxes.push(
-        <View key={`row-${i}`} className="flex-row justify-center mb-6 ">
+        <View key={`row-${i}`} className="flex-row justify-center mb-6">
           {[i, i + 1].map((index) => (
-            <View
-              key={`phrase-${index}`}
-              className="w-[45%] h-14 rounded-xl mx-2 justify-center items-center overflow-hidden border border-white/20 bg-white"
-              style={
-                isConcealed
-                  ? {
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      backdropFilter: 'blur(200px)',
-                      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
-                    }
-                  : {
-                      
-                    }
-              }
-            >
-              <Text
-                className={`text-black font-sora text-base ${
-                  isConcealed ? 'opacity-5' : ''
-                }`}
+            isConcealed ? (
+              <BlurView
+                key={`phrase-${index}`}
+                intensity={50}
+                tint="light"
+                style={{
+                  width: '45%',
+                  height: 45,
+                  borderRadius: 12,
+                  marginHorizontal: 8,
+                  overflow: 'hidden',
+                  backgroundColor: 'rgba(255, 255, 255, 1.5)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  opacity: 0.8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 10,
+                }}
               >
-                {phrases[index]}
-              </Text>
-            </View>
+                {/* Number - visible even when concealed */}
+                <Text
+                  style={{
+                    color: 'rgba(163, 163, 163, 0.1)', // neutral200 but dimmed for glass
+                  }}
+                >
+                  {index + 1}.
+                </Text>
+                {/* Phrase hidden */}
+                <Text
+                  style={{ opacity: 0, flex: 1, textAlign: 'center' }}
+                  className="text-black font-sora text-base"
+                >
+                  {phrases[index]}
+                </Text>
+              </BlurView>
+            ) : (
+              <View
+                key={`phrase-${index}`}
+                style={{
+                  width: '45%',
+                  height: 45,
+                  borderRadius: 12,
+                  marginHorizontal: 8,
+                  overflow: 'hidden',
+                  backgroundColor: 'white',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 10,
+                }}
+              >
+                {/* Number */}
+                <Text className="text-neutral200 font-sora text-sm" style={{ minWidth: 20 }}>
+                  {index + 1}.
+                </Text>
+                {/* Phrase centered in remaining space */}
+                <Text className="text-black font-sora text-base text-center flex-1">
+                  {phrases[index]}
+                </Text>
+              </View>
+            )
           ))}
         </View>
       );
@@ -178,8 +217,8 @@ export default function ViewKey() {
   };
   
   const handleCopyPhrases = () => {
-    const [startIndex, endIndex] = getStartEndIndex();
-    const phrasesToCopy = phrases.slice(startIndex, endIndex).join(' ');
+    // Always copy ALL phrases (12 or 24), regardless of current page
+    const phrasesToCopy = phrases.join(' ');
     Clipboard.setString(phrasesToCopy);
     setCopiedFeedback(true);
     setTimeout(() => {
@@ -211,7 +250,7 @@ export default function ViewKey() {
     <View className="flex-1 px-5">
       <View className="relative flex-row items-center justify-start mb-6">
         <TouchableOpacity className="z-10" onPress={() => router.back()}>
-        <BackIcon width={40} height={40} />
+          <BackIcon width={40} height={40} />
         </TouchableOpacity>
       </View>
 
@@ -220,7 +259,7 @@ export default function ViewKey() {
           className={`flex-1 py-3 rounded-xl ${
             displayedKeyType === '12' ? 'bg-white' : ''
           }`}
-          disabled={keyCount !== '12'} // Disable if not 12-key wallet
+          disabled={keyCount !== '12'}
         >
           <Text
             className={`text-center font-sora ${
@@ -228,7 +267,7 @@ export default function ViewKey() {
                 ? 'text-black font-sora-semibold'
                 : keyCount === '12' 
                   ? 'text-neutral200' 
-                  : 'text-neutral200' // Dimmed text for disabled tab
+                  : 'text-neutral200'
             }`}
           >
             12 Keys
@@ -239,7 +278,7 @@ export default function ViewKey() {
           className={`flex-1 py-3 rounded-xl ${
             displayedKeyType === '24' ? 'bg-white' : ''
           }`}
-          disabled={keyCount !== '24'} // Disable if not 24-key wallet
+          disabled={keyCount !== '24'}
         >
           <Text
             className={`text-center font-sora ${
@@ -247,7 +286,7 @@ export default function ViewKey() {
                 ? 'text-black font-sora-semibold'
                 : keyCount === '24'
                   ? 'text-neutral200'
-                  : 'text-neutral200' // Dimmed text for disabled tab
+                  : 'text-neutral200'
             }`}
           >
             24 Keys
@@ -293,15 +332,15 @@ export default function ViewKey() {
               )}
             </TouchableOpacity>
           </View>
+
           {phrases.length > 0 ? renderPhraseBoxes(start, end) : (
             <Text className="text-white text-center p-4">No phrases found for this wallet.</Text>
           )}
         </View>
 
-        {/* Only show pagination for 24-key wallets when viewing 24-key tab */}
         {keyCount === '24' && displayedKeyType === '24' && (
-          <View className="flex-row items-center justify-between mt-10 px-4">
-            <TouchableOpacity onPress={() => setPage(1)} disabled={isFirstPage}>
+          <View className="flex-row items-center justify-between mt-10 px-2">
+            <TouchableOpacity onPress={() => setPage(1)} disabled={isFirstPage} className='p-2'>
               <Image source={ArrowLeft} style={{ opacity: isFirstPage ? 0.5 : 1 }} />
             </TouchableOpacity>
 
@@ -316,7 +355,7 @@ export default function ViewKey() {
               ))}
             </View>
 
-            <TouchableOpacity onPress={() => setPage(2)} disabled={isLastPage}>
+            <TouchableOpacity onPress={() => setPage(2)} disabled={isLastPage} className='p-2'>
               <Image source={ArrowRight} style={{ opacity: isLastPage ? 0.5 : 1 }} />
             </TouchableOpacity>
           </View>

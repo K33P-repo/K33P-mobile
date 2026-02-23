@@ -12,7 +12,6 @@ export default function Fingerprint() {
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const setFingerprintComplete = useSetFingerprintComplete();
-
   useEffect(() => {
     checkBiometricAvailability();
   }, []);

@@ -25,24 +25,42 @@ interface Wallet {
   name: string;
   keyType?: '12' | '24';
   fileId?: string;
+  isCustom?: boolean; // ← new flag for custom-typed wallets
 }
 
 const allWallets: Wallet[] = [
-  { id: '1', name: 'Phantom Wallet' },
-  { id: '2', name: 'Trust Wallet' },
-  { id: '3', name: 'Danmask' },
-  { id: '4', name: 'Quantum' },
-  { id: '5', name: 'CoinKeeper' },
-  { id: '6', name: 'X Wallet' },
-  { id: '7', name: 'Telegram' },
-  { id: '8', name: 'MetaMask' },
-  { id: '9', name: 'Coinbase Wallet' },
+  { id: '1',  name: 'Phantom Wallet' },
+  { id: '2',  name: 'Trust Wallet' },
+  { id: '3',  name: 'Danmask' },
+  { id: '4',  name: 'Quantum' },
+  { id: '5',  name: 'CoinKeeper' },
+  { id: '6',  name: 'X Wallet' },
+  { id: '7',  name: 'Telegram' },
+  { id: '8',  name: 'MetaMask' },
+  { id: '9',  name: 'Coinbase Wallet' },
   { id: '10', name: 'Ledger Live' },
   { id: '11', name: 'Trezor Suite' },
   { id: '12', name: 'Exodus' },
   { id: '13', name: 'Atomic Wallet' },
   { id: '14', name: 'MyEtherWallet (MEW)' },
   { id: '15', name: 'Crypto.com Defi Wallet' },
+
+  // Newly added from the screenshot
+  { id: '16', name: 'Eternl Wallet' },
+  { id: '17', name: 'GeroWallet' },
+  { id: '18', name: 'Yoroi Wallet' },
+  { id: '19', name: 'Typhon Wallet' },
+  { id: '20', name: 'Lace Wallet' },
+  { id: '21', name: 'Tokero Wallet' },
+  { id: '22', name: 'VESPR Wallet' },
+  { id: '24', name: 'Keystone' },
+  { id: '25', name: 'Coinbase Wallet' },   
+  { id: '26', name: 'Rainbow Wallet' },
+  { id: '27', name: 'Brave Wallet' },
+  { id: '28', name: 'Enkrypt' },
+  { id: '29', name: 'XDEFI Wallet' },
+  { id: '30', name: 'Solfare' },
+
 ];
 
 const popularWallets: Wallet[] = [
@@ -53,6 +71,9 @@ const popularWallets: Wallet[] = [
   { id: '5', name: 'CoinKeeper' },
   { id: '6', name: 'X Wallet' },
   { id: '7', name: 'Telegram' },
+  { id: '8', name: 'Eternl Wallet' },
+  { id: '9', name: 'Lace Wallet' },
+
 ];
 
 export default function AddManually() {
@@ -68,16 +89,13 @@ export default function AddManually() {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const textInputRef = useRef<TextInput>(null);
 
-  // Log folder ID when component mounts
   useEffect(() => {
     console.log('AddManually: Folder ID received:', folderId);
-    
     if (!folderId) {
       Alert.alert('Error', 'Folder ID not found. Please go back and try again.');
     }
   }, [folderId]);
 
-  // Keyboard listeners
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
     const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
@@ -89,6 +107,10 @@ export default function AddManually() {
 
   const filteredWallets = allWallets.filter(wallet =>
     wallet.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const hasExactMatch = allWallets.some(
+    w => w.name.toLowerCase() === searchQuery.trim().toLowerCase()
   );
 
   const toggleSearch = () => {
@@ -138,69 +160,82 @@ export default function AddManually() {
     Keyboard.dismiss();
   };
 
-  const handleProceed = async () => {
+  const handleProceed = () => {
+    // If typing something not in list → treat as custom wallet
+    if (searchQuery.trim() && !hasExactMatch) {
+      const customName = searchQuery.trim();
+      const customWallet: Wallet = {
+        id: `custom-${Date.now()}`,
+        name: customName,
+        isCustom: true,
+      };
+
+      setSelectedWallets(prev => {
+        // Prevent duplicates
+        if (prev.some(w => w.name.toLowerCase() === customName.toLowerCase())) {
+          return prev;
+        }
+        return [...prev, customWallet];
+      });
+
+      // Clear input after adding
+      setSearchQuery('');
+      textInputRef.current?.focus(); // keep keyboard open for more additions
+      return;
+    }
+
+    // Normal flow (already selected from list)
+    // nothing extra here — button only shows "Proceed" when custom name is being typed
+  };
+
+  const handleFinalSubmit = async () => {
     if (!folderId) {
       Alert.alert('Error', 'Folder ID not found. Please try again.');
       return;
     }
 
     if (selectedWallets.length === 0) {
-      Alert.alert('No Wallets Selected', 'Please select at least one wallet to proceed.');
+      Alert.alert('No Wallets Selected', 'Please select or type at least one wallet.');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Add each selected wallet to the folder with just the name
       const results = await Promise.allSettled(
         selectedWallets.map(async (wallet) => {
-          // Create wallet data with just the name (no keyType or fileId)
           const walletData = createWalletData(wallet.name);
-
           console.log(`Adding wallet to folder ${folderId}:`, walletData);
-          
           const result = await addWalletToFolder(folderId as string, walletData);
-          
           if (!result.success) {
             throw new Error(result.message || `Failed to add ${wallet.name}`);
           }
-          
           return result;
         })
       );
 
-      // Check results
-      const successfulWallets = results.filter(result => result.status === 'fulfilled').length;
-      const failedWallets = results.filter(result => result.status === 'rejected');
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected');
 
-      if (failedWallets.length === 0) {
-        // All wallets added successfully
+      if (failed.length === 0) {
         Alert.alert(
-          'Success', 
-          `${successfulWallets} wallet(s) added successfully!`,
+          'Success',
+          `${successful} wallet(s) added successfully!`,
           [
-            { 
-              text: 'OK', 
+            {
+              text: 'OK',
               onPress: () => router.replace('/(home)/add-to-wallet')
             }
           ]
         );
       } else {
-        // Some wallets failed
-        const errorMessages = failedWallets
-          .map((result: any) => result.reason?.message || 'Unknown error')
+        const errorMsg = failed
+          .map((r: any) => r.reason?.message || 'Unknown error')
           .join('\n• ');
-
-        Alert.alert(
-          'Errror',
-          `${errorMessages}`,
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Error', errorMsg, [{ text: 'OK' }]);
       }
-
     } catch (error: any) {
-      console.error('AddManually: Error adding wallets to folder:', error);
+      console.error('Error adding wallets:', error);
       Alert.alert('Error', 'Failed to add wallets. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -208,20 +243,19 @@ export default function AddManually() {
   };
 
   const handleWalletSelect = (wallet: Wallet) => {
-    setSelectedWallets(prevSelected => {
-      if (prevSelected.some(w => w.id === wallet.id)) {
-        return prevSelected.filter(w => w.id !== wallet.id);
+    setSelectedWallets(prev => {
+      if (prev.some(w => w.id === wallet.id)) {
+        return prev.filter(w => w.id !== wallet.id);
       } else {
-        return [...prevSelected, wallet];
+        return [...prev, wallet];
       }
     });
-    
-    // If not searching, trigger search mode when a wallet is selected
+
     if (!isSearching) expandSearch();
   };
 
   const removeSelectedWallet = (walletId: string) => {
-    setSelectedWallets(selectedWallets.filter(w => w.id !== walletId));
+    setSelectedWallets(prev => prev.filter(w => w.id !== walletId));
   };
 
   const searchOpacity = fadeAnim.interpolate({
@@ -239,6 +273,14 @@ export default function AddManually() {
     outputRange: [10, 0],
   });
 
+  // Determine button text & action
+  const shouldShowProceed = searchQuery.trim() !== '' && !hasExactMatch;
+  const buttonText = shouldShowProceed
+    ? 'Proceed'
+    : `Add ${selectedWallets.length} Wallet${selectedWallets.length !== 1 ? 's' : ''}`;
+
+  const onButtonPress = shouldShowProceed ? handleProceed : handleFinalSubmit;
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -246,10 +288,10 @@ export default function AddManually() {
     >
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
         <View className="flex-1 px-5">
-          {/* Header Area (Back button and Animated Search Input) */}
-          <View className="">
+          {/* Header */}
+          <View>
             <View className="flex-row items-center justify-start mb-4">
-              <TouchableOpacity onPress={() => router.back()} >
+              <TouchableOpacity onPress={() => router.back()}>
                 <BackIcon width={40} height={40} />
               </TouchableOpacity>
             </View>
@@ -274,22 +316,16 @@ export default function AddManually() {
             </Animated.View>
           </View>
 
-          {/* Folder Info */}
-          {/* {folderId && (
-            <View className="bg-primary20 rounded-lg p-3 mb-4">
-              <Text className="text-primary100 font-sora text-xs">
-                Adding wallets to your folder
-              </Text>
-            </View>
-          )} */}
-
-          {/* Main Content Area */}
+          {/* Main content */}
           <View className={`flex-1 ${!isSearching ? 'justify-end' : ''}`}>
-            {/* Selected Wallets - Visible only when searching and if any wallets are selected */}
+            {/* Selected chips */}
             {isSearching && selectedWallets.length > 0 && (
               <View className="flex-row flex-wrap mb-3">
                 {selectedWallets.map(wallet => (
-                  <View key={wallet.id} className="bg-primary100 flex-row items-center rounded-full px-3 py-1 mr-2 mb-2">
+                  <View
+                    key={wallet.id}
+                    className="bg-primary100 flex-row items-center rounded-full px-3 py-1 mr-2 mb-2"
+                  >
                     <Text className="text-black font-sora text-xs mr-2">{wallet.name}</Text>
                     <TouchableOpacity onPress={() => removeSelectedWallet(wallet.id)}>
                       <Octicons name="x" size={12} color="black" />
@@ -300,52 +336,44 @@ export default function AddManually() {
             )}
 
             {isSearching ? (
-              <>
-                <ScrollView
-                  className="flex-1 mb-3"
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {searchQuery !== '' ? (
-                    // Display filtered wallets ONLY when a search query is present
-                    filteredWallets.map(wallet => (
-                      <TouchableOpacity
-                        key={wallet.id}
-                        className="flex-row justify-between items-center py-3 "
-                        onPress={() => handleWalletSelect(wallet)}
-                      >
-                        <Text className="text-white font-sora text-base">{wallet.name}</Text>
-                        {selectedWallets.some(w => w.id === wallet.id) ? (
-                          <MaterialIcons name="radio-button-checked" size={20} color="#FFD700" />
-                        ) : (
-                          <MaterialIcons name="radio-button-unchecked" size={20} color="#B0B0B0" />
-                        )}
-                      </TouchableOpacity>
-                    ))
-                  ) : (
-                    // If searching but query is empty, show Popular Searches (only if no selected items)
-                    selectedWallets.length === 0 && (
-                      <View className="pb-4">
-                        <Text className="text-neutral100 font-space-mono text-xs mb-4">Popular Searches</Text>
-                        <View className="flex-row flex-wrap">
-                          {popularWallets.map(wallet => (
-                            <TouchableOpacity
-                              key={wallet.id}
-                              className="bg-neutral300 rounded-lg px-4 py-3 mr-2 mb-3"
-                              onPress={() => handleWalletSelect(wallet)}
-                            >
-                              <Text className="text-white font-sora text-sm">{wallet.name}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
+              <ScrollView className="flex-1 mb-3" keyboardShouldPersistTaps="handled">
+                {searchQuery !== '' ? (
+                  filteredWallets.map(wallet => (
+                    <TouchableOpacity
+                      key={wallet.id}
+                      className="flex-row justify-between items-center py-3"
+                      onPress={() => handleWalletSelect(wallet)}
+                    >
+                      <Text className="text-white font-sora text-base">{wallet.name}</Text>
+                      {selectedWallets.some(w => w.id === wallet.id) ? (
+                        <MaterialIcons name="radio-button-checked" size={20} color="#FFD700" />
+                      ) : (
+                        <MaterialIcons name="radio-button-unchecked" size={20} color="#B0B0B0" />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  selectedWallets.length === 0 && (
+                    <View className="pb-4">
+                      <Text className="text-neutral100 font-space-mono text-xs mb-4">Popular Searches</Text>
+                      <View className="flex-row flex-wrap">
+                        {popularWallets.map(wallet => (
+                          <TouchableOpacity
+                            key={wallet.id}
+                            className="bg-neutral300 rounded-lg px-4 py-3 mr-2 mb-3"
+                            onPress={() => handleWalletSelect(wallet)}
+                          >
+                            <Text className="text-white font-sora text-sm">{wallet.name}</Text>
+                          </TouchableOpacity>
+                        ))}
                       </View>
-                    )
-                  )}
-                </ScrollView>
-              </>
+                    </View>
+                  )
+                )}
+              </ScrollView>
             ) : (
-              // Display initial content (question and popular searches) when not searching
               <>
-                {selectedWallets.length === 0 && ( // Only show question if no selected wallets
+                {selectedWallets.length === 0 && (
                   <View className="flex-row justify-between items-start mb-8">
                     <Animated.Text
                       style={{ opacity: searchOpacity, flex: 1 }}
@@ -358,13 +386,13 @@ export default function AddManually() {
                         onPress={toggleSearch}
                         className="bg-mainBlack p-3 rounded-full ml-4"
                       >
-                        <Octicons name="search" size={18} color="#FFD700" className="-mt-2"/>
+                        <Octicons name="search" size={18} color="#FFD700" className="-mt-2" />
                       </TouchableOpacity>
                     </Animated.View>
                   </View>
                 )}
 
-                {selectedWallets.length === 0 && ( // Only show popular searches if no selected wallets
+                {selectedWallets.length === 0 && (
                   <View className="pb-4">
                     <Text className="text-neutral100 font-space-mono text-xs mb-4">Popular Searches</Text>
                     <View className="flex-row flex-wrap">
@@ -384,13 +412,13 @@ export default function AddManually() {
             )}
           </View>
 
-          {/* Proceed Button - Updated with loading state */}
-          {(selectedWallets.length > 0 || (isSearching && searchQuery !== '')) && (
+          {/* Button area */}
+          {(selectedWallets.length > 0 || (isSearching && searchQuery.trim() !== '')) && (
             <View className="pb-16">
               <Button
-                text={isSubmitting ? "Adding Wallets..." : `Add ${selectedWallets.length} Wallet(s)`}
-                onPress={handleProceed}
-                isDisabled={selectedWallets.length === 0 || isSubmitting}
+                text={isSubmitting ? "Adding Wallets..." : buttonText}
+                onPress={onButtonPress}
+                isDisabled={selectedWallets.length === 0 && !shouldShowProceed || isSubmitting}
                 loading={isSubmitting}
               />
             </View>

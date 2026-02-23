@@ -33,7 +33,7 @@ export default function Biometrics() {
   const setFingerprintComplete = useSetFingerprintComplete();
   const setVoiceComplete = useSetVoiceComplete();
   const setIrisComplete = useSetIrisComplete();
-
+  
   // Memoize the methods to prevent unnecessary recalculations
   const methods = useMemo(() => [
     {

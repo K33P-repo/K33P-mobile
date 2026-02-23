@@ -97,6 +97,7 @@ interface AuthState {
   setIsAuthenticated: (value: boolean) => void;
   logStoreState: () => Promise<void>;
   getCompletedBiometrics: () => string[];
+  clearBiometricSetup: () => void; // ← ADD THIS LINE
   
   // NEW: User data actions
   setUserData: (userData: UserData) => void;
@@ -203,6 +204,20 @@ export const useAuthStore = create<AuthState>()(
         return completed;
       },
 
+      clearBiometricSetup: () => {
+        console.log('Clearing biometric setup for new registration');
+        set({ 
+          biometricSetup: {
+            face: false,
+            fingerprint: false,
+            voice: false,
+            iris: false
+          }
+        });
+      },
+
+      
+
       // NEW: User data actions
       setUserData: (userData) => {
         console.log('Setting user data in store:', {
@@ -289,6 +304,7 @@ export const useClearUserData = () => useAuthStore((state) => state.clearUserDat
 export const useClearAuth = () => useAuthStore((state) => state.clearAuth);
 export const useHasAuthMethod = () => useAuthStore((state) => state.hasAuthMethod);
 export const useGetAuthMethod = () => useAuthStore((state) => state.getAuthMethod);
+export const useClearBiometricSetup = () => useAuthStore((state) => state.clearBiometricSetup);
 
 // store/useAuthStore.ts
 export const useCompletedBiometrics = () => {

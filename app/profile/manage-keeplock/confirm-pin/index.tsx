@@ -87,7 +87,7 @@ const handleLoginWithPin = async (enteredPin: string) => {
     console.log('✅ LOCAL PIN VERIFICATION SUCCESSFUL');
 
     // Now proceed with server login
-    const phoneEncrypted = encryptPhoneData(phoneNumber);
+    const phoneEncrypted = await encryptPhoneData(phoneNumber, userId);
     const pinEncrypted = encryptPinData(enteredPin, userId);
     
     console.log('🔐 ENCRYPTION DETAILS:');

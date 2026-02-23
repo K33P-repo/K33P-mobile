@@ -14,10 +14,9 @@ import {
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Clipboard, Image, Modal, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, Clipboard, Image, Keyboard, Modal, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, View } from 'react-native';
 import CopyIcon from '../../../../assets/images/Copy.png';
 import DidCreationFailed from '../../../../assets/images/did-failed.png';
-import ProgressFailed from '../../../../assets/images/did-progress-failed.png';
 import DidCreationImage1 from '../../../../assets/images/did_creation.png';
 import DidCreationImage2 from '../../../../assets/images/did_creation2.png';
 import DidCreationImage3 from '../../../../assets/images/did_creation3.png';
@@ -80,6 +79,17 @@ export default function DidScreen() {
     setError(null);
     setShowProgress(true);
   };
+  const [bottomPadding, setBottomPadding] = useState(0);
+
+useEffect(() => {
+  const show = Keyboard.addListener('keyboardDidShow', (e) => {
+    setBottomPadding(e.endCoordinates.height - 400);
+  });
+  const hide = Keyboard.addListener('keyboardDidHide', () => {
+    setBottomPadding(0);
+  });
+  return () => { show.remove(); hide.remove(); };
+}, []);
 
   const handleRetry = async () => {
     if (!currentStep) return;
@@ -118,13 +128,13 @@ export default function DidScreen() {
       console.log("--- Step 1: Requesting Initial Refund ---");
       
       // Use API utility function
-      const initialRefundData = await initiateRefund(sendingAddress);
-      console.log("Initial Refund response:", initialRefundData); 
+     const initialRefundData = await initiateRefund(sendingAddress);
+      console.log("Initial Refund response:", initialRefundData);   
   
-      console.log("--- Step 2: Creating Account ---");
+      console.log("--- Step 2: Creating Secure Auth Methods ---");
       
-      // Generate encrypted hashes and auth methods using utility function
-      const authMethods = createAuthMethods(phoneNumber, pin, userId);
+      // ✅ ADD AWAIT HERE - Generate encrypted hashes and auth methods
+      const authMethods = await createAuthMethods(phoneNumber, pin, userId);
   
       // Prepare signup payload
       const signupPayload = {
@@ -138,11 +148,17 @@ export default function DidScreen() {
         verificationMethod: 'phone'
       };
   
-      console.log("Signup Payload:", {
-        ...signupPayload,
-        authMethods: authMethods.map(m => ({ type: m.type, hasData: !!m.data }))
+      console.log("Signup Payload prepared:", {
+        userId: signupPayload.userId,
+        userAddress: signupPayload.userAddress,
+        hasPhoneHash: !!signupPayload.phoneHash,
+        hasPinHash: !!signupPayload.pinHash,
+        authMethodsCount: signupPayload.authMethods.length,
+        verificationMethod: signupPayload.verificationMethod
       });
   
+      console.log("--- Step 3: Registering User ---");
+      
       // Use API utility function for signup
       const signupData = await signupUser(signupPayload);
       console.log("Signup Response:", signupData);
@@ -150,23 +166,26 @@ export default function DidScreen() {
       // Save token and user data to store after successful signup
       if (signupData.data?.token) {
         setToken(signupData.data.token);
-        console.log('Token saved to store after signup');
+        console.log('✅ Token saved to store after signup');
       }
       
       if (signupData.data?.userId) {
         setUserId(signupData.data.userId);
+        console.log('✅ User ID saved to store:', signupData.data.userId);
       }
       
       if (signupData.data?.userAddress) {
         setWalletAddress(signupData.data.userAddress);
+        console.log('✅ Wallet address saved to store');
       }
       
       if (signupData.data?.authMethods) {
         setUserAuthMethods(signupData.data.authMethods);
+        console.log('✅ Auth methods saved to store');
       }
   
-      // STEP 3: Complete the refund flow after successful account creation
-      console.log("--- Step 3: Completing Refund Flow ---");
+      // STEP 4: Complete the refund flow after successful account creation
+      console.log("--- Step 4: Completing Refund Flow ---");
       setCurrentDidImage(DidCreationImage3); 
       setProgressText('DID created. Initiating collateral refund...');
       setCurrentProgressImage(Progress70);
@@ -176,17 +195,20 @@ export default function DidScreen() {
       setCurrentProgressImage(Progress100);
       
       setTimeout(() => {
+        console.log('✅ Account creation complete. Navigating to name setup...');
         router.push('/(auth)/sign-up/name');
       }, 2000); 
   
     } catch (error: unknown) {
-      console.error("Account creation error:", error);
+      console.error("❌ Account creation error:", error);
       
       let errorMessage = 'An unexpected error occurred during account creation. Please try again.';
       
       if (error instanceof Error) {
         if (error.message?.includes('Network request failed')) {
           errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message?.includes('encrypt') || error.message?.includes('hash')) {
+          errorMessage = 'Security setup failed. Please try again.';
         } else {
           errorMessage = error.message;
         }
@@ -202,6 +224,7 @@ export default function DidScreen() {
       setIsLoading(false);
     }
   };
+  
 
   const triggerImmediateRefund = async () => {
     console.log("--- Requesting Immediate Refund ---");
@@ -306,6 +329,20 @@ export default function DidScreen() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+
+const { height: windowHeight } = useWindowDimensions();
+const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+useEffect(() => {
+  const show = Keyboard.addListener('keyboardDidShow', (e) => {
+    setKeyboardHeight(e.endCoordinates.height - 300);
+  });
+  const hide = Keyboard.addListener('keyboardDidHide', () => {
+    setKeyboardHeight(0);
+  });
+  return () => { show.remove(); hide.remove(); };
+}, []);
+
   return (
     <View className="flex-1  px-5">
       <View className="relative flex-row items-center justify-start mb-12">
@@ -392,118 +429,113 @@ export default function DidScreen() {
 
       {/* Send ADA Modal */}
       <Modal
-        visible={showSendAdaModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowSendAdaModal(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setShowSendAdaModal(false)}>
-          <View className="flex-1 bg-neutral800/90 justify-end">
-            <TouchableWithoutFeedback>
-              <View className="bg-mainBlack rounded-t-3xl px-6 pb-16">
-                <TouchableOpacity className="items-center pt-3 pb-12" onPress={() => setShowSendAdaModal(false)}>
-                  <View className="w-16 h-1 bg-white rounded-full" />
-                </TouchableOpacity>
+  visible={showSendAdaModal}
+  animationType="slide"
+  transparent={true}
+  onRequestClose={() => {
+    Keyboard.dismiss();
+    setShowSendAdaModal(false);
+  }}
+>
+  <TouchableWithoutFeedback onPress={() => {
+    Keyboard.dismiss();
+    setShowSendAdaModal(false);
+  }}>
+    <View className="flex-1 bg-neutral800/90 justify-end">
+      <TouchableWithoutFeedback>
+        <View className="bg-mainBlack rounded-t-3xl px-6 pb-16" style={{ marginBottom: keyboardHeight }}>
+          <TouchableOpacity className="items-center pt-3 pb-12" onPress={() => setShowSendAdaModal(false)}>
+            <View className="w-16 h-1 bg-white rounded-full" />
+          </TouchableOpacity>
 
-                <Text className="text-white font-sora-bold text-lg text-center mb-6">
-                  Send 2 ADA
-                </Text>
+          <Text className="text-white font-sora-bold text-lg text-center mb-6">
+            Send 2 ADA
+          </Text>
 
-                <View className="items-center mb-6">
-                  <Image 
-                    source={QRCodeImage} 
-                    resizeMode="contain" 
-                    className="w-32 h-32"
-                  />
-                </View>
-
-                <Text className="text-neutral200 font-sora text-xs text-center mb-6 px-20">
-                  Scan QR code with camera to send 2ADA
-                </Text>
-
-                <View className="flex-row w-full mb-6 overflow-hidden">
-                  {[...Array(100)].map((_, i) => (
-                    <View 
-                      key={i}
-                      className="h-px w-[.5px] bg-neutral200 mx-0.5"
-                    />
-                  ))}
-                </View>                
-
-                <Text
-                  style={{ letterSpacing: .78 }} 
-                  className="text-white text-xs text-center font-space-mono mb-4 px-5 leading-relaxed break-words max-w-[300px] mx-auto"
-                  numberOfLines={3}
-                >
-                  {walletAddress}
-                </Text>
-
-                <TouchableOpacity 
-                  className="flex-row items-center justify-center mb-8"
-                  onPress={handleCopyAddress}
-                >
-                  {copied ? (
-                    <Ionicons name="checkmark" size={16} color="#FFD939" className="mr-2" />
-                  ) : (
-                    <Image 
-                      source={CopyIcon}
-                      className="w-5 h-5 mr-2"
-                      resizeMode="contain"
-                    />
-                  )}
-
-                  <Text className={`font-sora text-sm ${copied ? "text-main" : "text-neutral200"}`}>
-                    {copied ? "Copied!" : "Copy"}
-                  </Text>
-                </TouchableOpacity>
-                
-                <View className="mb-8 w-full mt-5">
-                  <Text className="text-white font-sora text-sm mb-3">
-                    Your sending address
-                  </Text>
-                  <View className="flex-row items-center border border-neutral200 rounded-md px-3 ">
-                    <TextInput
-                      placeholder="Paste ADA address"
-                      placeholderTextColor="#A0A0A0"
-                      className="flex-1 text-white font-sora text-sm h-12"
-                      value={sendingAddress}
-                      onChangeText={setSendingAddress}
-                    />
-                    <Image 
-                      source={InputEndIcon} 
-                      className="ml-2"
-                      resizeMode="contain"
-                    />
-                  </View>
-                </View>
-                
-                <View className="flex-row items-center mt-3 mb-4">
-                  <TouchableOpacity 
-                    onPress={() => setAcceptedPrivacy(!acceptedPrivacy)}
-                    className="mr-2"
-                  >
-                    {acceptedPrivacy ? (
-                      <Ionicons name="checkbox" size={24} color="#FFD939" />
-                    ) : (
-                      <Ionicons name="checkbox-outline" size={24} color="#6B7280" />
-                    )}
-                  </TouchableOpacity>
-                  <Text className="text-white font-sora text-sm">
-                    Accept the <Text className="text-main">Privacy Policy & T&U</Text>
-                  </Text>
-                </View>
-
-                <Button
-                  text={isLoading ? "Processing..." : "I have sent 2 ADA"}
-                  onPress={handleSendAda}
-                  isDisabled={!sendingAddress || !acceptedPrivacy || isLoading}
-                />
-              </View>
-            </TouchableWithoutFeedback>
+          <View className="items-center mb-6">
+            <Image source={QRCodeImage} resizeMode="contain" className="w-32 h-32" />
           </View>
-        </TouchableWithoutFeedback>
-      </Modal>
 
+          <Text className="text-neutral200 font-sora text-xs text-center mb-6 px-20">
+            Scan QR code with camera to send 2ADA
+          </Text>
+
+          <View className="flex-row w-full mb-6 overflow-hidden">
+            {[...Array(100)].map((_, i) => (
+              <View key={i} className="h-px w-[.5px] bg-neutral200 mx-0.5" />
+            ))}
+          </View>
+
+          <Text
+            style={{ letterSpacing: .78 }}
+            className="text-white text-xs text-center font-space-mono mb-4 px-5 leading-relaxed break-words max-w-[300px] mx-auto"
+            numberOfLines={3}
+          >
+            {walletAddress}
+          </Text>
+
+          <TouchableOpacity
+            className="flex-row items-center justify-center mb-8"
+            onPress={handleCopyAddress}
+          >
+            {copied ? (
+              <Ionicons name="checkmark" size={16} color="#FFD939" className="mr-2" />
+            ) : (
+              <Image source={CopyIcon} className="w-5 h-5 mr-2" resizeMode="contain" />
+            )}
+            <Text className={`font-sora text-sm ${copied ? "text-main" : "text-neutral200"}`}>
+              {copied ? "Copied!" : "Copy"}
+            </Text>
+          </TouchableOpacity>
+
+          <View className="mb-8 w-full mt-5">
+            <Text className="text-white font-sora text-sm mb-3">
+              Your sending address
+            </Text>
+            <View className="flex-row items-center border border-neutral200 rounded-md px-3">
+              <TextInput
+                placeholder="Paste ADA address"
+                placeholderTextColor="#A0A0A0"
+                className="flex-1 text-white font-sora text-sm h-12"
+                value={sendingAddress}
+                onChangeText={setSendingAddress}
+                returnKeyType="done"
+                autoCorrect={false}
+                autoCapitalize="none"
+                onSubmitEditing={() => Keyboard.dismiss()}
+              />
+              <TouchableOpacity onPress={async () => {
+                const text = await Clipboard.getString();
+                setSendingAddress(text);
+              }}>
+                <Image source={InputEndIcon} className="ml-2" resizeMode="contain" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View className="flex-row items-center mt-3 mb-4">
+            <TouchableOpacity onPress={() => setAcceptedPrivacy(!acceptedPrivacy)} className="mr-2">
+              {acceptedPrivacy ? (
+                <Ionicons name="checkbox" size={24} color="#FFD939" />
+              ) : (
+                <Ionicons name="checkbox-outline" size={24} color="#6B7280" />
+              )}
+            </TouchableOpacity>
+            <Text className="text-white font-sora text-sm">
+              Accept the <Text className="text-main">Privacy Policy & T&U</Text>
+            </Text>
+          </View>
+
+          <Button
+            text={isLoading ? "Processing..." : "I have sent 2 ADA"}
+            onPress={handleSendAda}
+            isDisabled={!sendingAddress || !acceptedPrivacy || isLoading}
+          />
+        </View>
+      </TouchableWithoutFeedback>
+    </View>
+  </TouchableWithoutFeedback>
+</Modal>
       {/* Confirmation Modal */}
       <Modal
         visible={showConfirmationModal}
