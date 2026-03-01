@@ -217,14 +217,18 @@ export default function ViewKey() {
   };
   
   const handleCopyPhrases = () => {
-    // Always copy ALL phrases (12 or 24), regardless of current page
-    const phrasesToCopy = phrases.join(' ');
+    const phrasesToCopy = phrases
+      .slice(0, keyCount === '12' ? 12 : 24)
+      .map((phrase, index) => `${index + 1}. ${phrase}`)
+      .join('\n');
+    
     Clipboard.setString(phrasesToCopy);
     setCopiedFeedback(true);
     setTimeout(() => {
       setCopiedFeedback(false);
     }, 2000);
   };
+
 
   if (loading) {
     return (

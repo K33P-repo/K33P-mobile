@@ -14,7 +14,7 @@ import {
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Clipboard, Image, Keyboard, Modal, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, View } from 'react-native';
+import { Alert, Clipboard, Image, Keyboard, Modal, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, View } from 'react-native';
 import CopyIcon from '../../../../assets/images/Copy.png';
 import DidCreationFailed from '../../../../assets/images/did-failed.png';
 import DidCreationImage1 from '../../../../assets/images/did_creation.png';
@@ -81,15 +81,20 @@ export default function DidScreen() {
   };
   const [bottomPadding, setBottomPadding] = useState(0);
 
-useEffect(() => {
-  const show = Keyboard.addListener('keyboardDidShow', (e) => {
-    setBottomPadding(e.endCoordinates.height - 400);
-  });
-  const hide = Keyboard.addListener('keyboardDidHide', () => {
-    setBottomPadding(0);
-  });
-  return () => { show.remove(); hide.remove(); };
-}, []);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', (e) => {
+      const height = e.endCoordinates.height;
+      console.log('⌨️ [Send ADA Modal] Keyboard SHOWN — raw height:', height);
+      setBottomPadding(height - 400);
+      setKeyboardHeight(height - 300);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      console.log('⌨️ [Send ADA Modal] Keyboard HIDDEN');
+      setBottomPadding(0);
+      setKeyboardHeight(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   const handleRetry = async () => {
     if (!currentStep) return;
@@ -428,7 +433,8 @@ useEffect(() => {
       )}
 
       {/* Send ADA Modal */}
-      <Modal
+{/* Send ADA Modal */}
+<Modal
   visible={showSendAdaModal}
   animationType="slide"
   transparent={true}
@@ -443,94 +449,104 @@ useEffect(() => {
   }}>
     <View className="flex-1 bg-neutral800/90 justify-end">
       <TouchableWithoutFeedback>
-        <View className="bg-mainBlack rounded-t-3xl px-6 pb-16" style={{ marginBottom: keyboardHeight }}>
-          <TouchableOpacity className="items-center pt-3 pb-12" onPress={() => setShowSendAdaModal(false)}>
+        {/* Fixed height container — no more marginBottom */}
+        <View className="bg-mainBlack rounded-t-3xl px-6" style={{ maxHeight: '90%' }}>
+          
+          <TouchableOpacity className="items-center pt-3 pb-6" onPress={() => setShowSendAdaModal(false)}>
             <View className="w-16 h-1 bg-white rounded-full" />
           </TouchableOpacity>
 
-          <Text className="text-white font-sora-bold text-lg text-center mb-6">
-            Send 2 ADA
-          </Text>
-
-          <View className="items-center mb-6">
-            <Image source={QRCodeImage} resizeMode="contain" className="w-32 h-32" />
-          </View>
-
-          <Text className="text-neutral200 font-sora text-xs text-center mb-6 px-20">
-            Scan QR code with camera to send 2ADA
-          </Text>
-
-          <View className="flex-row w-full mb-6 overflow-hidden">
-            {[...Array(100)].map((_, i) => (
-              <View key={i} className="h-px w-[.5px] bg-neutral200 mx-0.5" />
-            ))}
-          </View>
-
-          <Text
-            style={{ letterSpacing: .78 }}
-            className="text-white text-xs text-center font-space-mono mb-4 px-5 leading-relaxed break-words max-w-[300px] mx-auto"
-            numberOfLines={3}
+          {/* ScrollView handles keyboard push natively on Android build */}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            onScrollBeginDrag={Keyboard.dismiss}
           >
-            {walletAddress}
-          </Text>
-
-          <TouchableOpacity
-            className="flex-row items-center justify-center mb-8"
-            onPress={handleCopyAddress}
-          >
-            {copied ? (
-              <Ionicons name="checkmark" size={16} color="#FFD939" className="mr-2" />
-            ) : (
-              <Image source={CopyIcon} className="w-5 h-5 mr-2" resizeMode="contain" />
-            )}
-            <Text className={`font-sora text-sm ${copied ? "text-main" : "text-neutral200"}`}>
-              {copied ? "Copied!" : "Copy"}
+            <Text className="text-white font-sora-bold text-lg text-center mb-6">
+              Send 2 ADA
             </Text>
-          </TouchableOpacity>
 
-          <View className="mb-8 w-full mt-5">
-            <Text className="text-white font-sora text-sm mb-3">
-              Your sending address
-            </Text>
-            <View className="flex-row items-center border border-neutral200 rounded-md px-3">
-              <TextInput
-                placeholder="Paste ADA address"
-                placeholderTextColor="#A0A0A0"
-                className="flex-1 text-white font-sora text-sm h-12"
-                value={sendingAddress}
-                onChangeText={setSendingAddress}
-                returnKeyType="done"
-                autoCorrect={false}
-                autoCapitalize="none"
-                onSubmitEditing={() => Keyboard.dismiss()}
-              />
-              <TouchableOpacity onPress={async () => {
-                const text = await Clipboard.getString();
-                setSendingAddress(text);
-              }}>
-                <Image source={InputEndIcon} className="ml-2" resizeMode="contain" />
-              </TouchableOpacity>
+            <View className="items-center mb-6">
+              <Image source={QRCodeImage} resizeMode="contain" className="w-32 h-32" />
             </View>
-          </View>
 
-          <View className="flex-row items-center mt-3 mb-4">
-            <TouchableOpacity onPress={() => setAcceptedPrivacy(!acceptedPrivacy)} className="mr-2">
-              {acceptedPrivacy ? (
-                <Ionicons name="checkbox" size={24} color="#FFD939" />
-              ) : (
-                <Ionicons name="checkbox-outline" size={24} color="#6B7280" />
-              )}
-            </TouchableOpacity>
-            <Text className="text-white font-sora text-sm">
-              Accept the <Text className="text-main">Privacy Policy & T&U</Text>
+            <Text className="text-neutral200 font-sora text-xs text-center mb-6 px-20">
+              Scan QR code with camera to send 2ADA
             </Text>
-          </View>
 
-          <Button
-            text={isLoading ? "Processing..." : "I have sent 2 ADA"}
-            onPress={handleSendAda}
-            isDisabled={!sendingAddress || !acceptedPrivacy || isLoading}
-          />
+            <View className="flex-row w-full mb-6 overflow-hidden">
+              {[...Array(100)].map((_, i) => (
+                <View key={i} className="h-px w-[.5px] bg-neutral200 mx-0.5" />
+              ))}
+            </View>
+
+            <Text
+              style={{ letterSpacing: .78 }}
+              className="text-white text-xs text-center font-space-mono mb-4 px-5 leading-relaxed break-words max-w-[300px] mx-auto"
+              numberOfLines={3}
+            >
+              {walletAddress}
+            </Text>
+
+            <TouchableOpacity
+              className="flex-row items-center justify-center mb-8"
+              onPress={handleCopyAddress}
+            >
+              {copied ? (
+                <Ionicons name="checkmark" size={16} color="#FFD939" className="mr-2" />
+              ) : (
+                <Image source={CopyIcon} className="w-5 h-5 mr-2" resizeMode="contain" />
+              )}
+              <Text className={`font-sora text-sm ${copied ? "text-main" : "text-neutral200"}`}>
+                {copied ? "Copied!" : "Copy"}
+              </Text>
+            </TouchableOpacity>
+
+            <View className="mb-8 w-full mt-5">
+              <Text className="text-white font-sora text-sm mb-3">
+                Your sending address
+              </Text>
+              <View className="flex-row items-center border border-neutral200 rounded-md px-3">
+                <TextInput
+                  placeholder="Paste ADA address"
+                  placeholderTextColor="#A0A0A0"
+                  className="flex-1 text-white font-sora text-sm h-12"
+                  value={sendingAddress}
+                  onChangeText={setSendingAddress}
+                  returnKeyType="done"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                />
+                <TouchableOpacity onPress={async () => {
+                  const text = await Clipboard.getString();
+                  setSendingAddress(text);
+                }}>
+                  <Image source={InputEndIcon} className="ml-2" resizeMode="contain" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View className="flex-row items-center mt-3 mb-4">
+              <TouchableOpacity onPress={() => setAcceptedPrivacy(!acceptedPrivacy)} className="mr-2">
+                {acceptedPrivacy ? (
+                  <Ionicons name="checkbox" size={24} color="#FFD939" />
+                ) : (
+                  <Ionicons name="checkbox-outline" size={24} color="#6B7280" />
+                )}
+              </TouchableOpacity>
+              <Text className="text-white font-sora text-sm">
+                Accept the <Text className="text-main">Privacy Policy & T&U</Text>
+              </Text>
+            </View>
+
+            <Button
+              text={isLoading ? "Processing..." : "I have sent 2 ADA"}
+              onPress={handleSendAda}
+              isDisabled={!sendingAddress || !acceptedPrivacy || isLoading}
+            />
+          </ScrollView>
         </View>
       </TouchableWithoutFeedback>
     </View>

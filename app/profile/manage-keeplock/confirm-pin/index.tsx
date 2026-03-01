@@ -5,7 +5,7 @@ import NumericKeypad from '@/components/Keypad';
 import { useAuthStore } from '@/store/useAuthMethod';
 import { usePhoneStore } from '@/store/usePhoneStore';
 import { encryptPhoneData } from '@/utils/phoneEncyption';
-import { encryptPinData, verifyPinHash } from '@/utils/pinEncryption';
+import { hashPin } from '@/utils/pinEncryption';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -76,7 +76,7 @@ const handleLoginWithPin = async (enteredPin: string) => {
     console.log('• Stored PIN hash:', storedPinHash);
     
     // Verify PIN locally first
-    const pinMatches = verifyPinHash(enteredPin, userId, storedPinHash);
+    /* const pinMatches = verifyPinHash(enteredPin, userId, storedPinHash);
     
     if (!pinMatches) {
       console.log('❌ LOCAL PIN VERIFICATION FAILED');
@@ -84,11 +84,11 @@ const handleLoginWithPin = async (enteredPin: string) => {
       return false;
     }
 
-    console.log('✅ LOCAL PIN VERIFICATION SUCCESSFUL');
+    console.log('✅ LOCAL PIN VERIFICATION SUCCESSFUL'); */
 
     // Now proceed with server login
-    const phoneEncrypted = await encryptPhoneData(phoneNumber, userId);
-    const pinEncrypted = encryptPinData(enteredPin, userId);
+    const phoneEncrypted = await encryptPhoneData(phoneNumber);
+    const pinEncrypted = hashPin(enteredPin, userId);
     
     console.log('🔐 ENCRYPTION DETAILS:');
     console.log('Phone Encrypted:', phoneEncrypted);

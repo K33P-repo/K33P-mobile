@@ -25,27 +25,25 @@ interface Wallet {
   name: string;
   keyType?: '12' | '24';
   fileId?: string;
-  isCustom?: boolean; // ← new flag for custom-typed wallets
+  isCustom?: boolean;
 }
 
 const allWallets: Wallet[] = [
-  { id: '1',  name: 'Phantom Wallet' },
-  { id: '2',  name: 'Trust Wallet' },
-  { id: '3',  name: 'Danmask' },
-  { id: '4',  name: 'Quantum' },
-  { id: '5',  name: 'CoinKeeper' },
-  { id: '6',  name: 'X Wallet' },
-  { id: '7',  name: 'Telegram' },
-  { id: '8',  name: 'MetaMask' },
-  { id: '9',  name: 'Coinbase Wallet' },
+  { id: '1', name: 'Phantom Wallet' },
+  { id: '2', name: 'Trust Wallet' },
+  { id: '3', name: 'Danmask' },
+  { id: '4', name: 'Quantum' },
+  { id: '5', name: 'CoinKeeper' },
+  { id: '6', name: 'X Wallet' },
+  { id: '7', name: 'Telegram' },
+  { id: '8', name: 'MetaMask' },
+  { id: '9', name: 'Coinbase Wallet' },
   { id: '10', name: 'Ledger Live' },
   { id: '11', name: 'Trezor Suite' },
   { id: '12', name: 'Exodus' },
   { id: '13', name: 'Atomic Wallet' },
   { id: '14', name: 'MyEtherWallet (MEW)' },
   { id: '15', name: 'Crypto.com Defi Wallet' },
-
-  // Newly added from the screenshot
   { id: '16', name: 'Eternl Wallet' },
   { id: '17', name: 'GeroWallet' },
   { id: '18', name: 'Yoroi Wallet' },
@@ -54,13 +52,12 @@ const allWallets: Wallet[] = [
   { id: '21', name: 'Tokero Wallet' },
   { id: '22', name: 'VESPR Wallet' },
   { id: '24', name: 'Keystone' },
-  { id: '25', name: 'Coinbase Wallet' },   
+  { id: '25', name: 'Coinbase Wallet' },
   { id: '26', name: 'Rainbow Wallet' },
   { id: '27', name: 'Brave Wallet' },
   { id: '28', name: 'Enkrypt' },
   { id: '29', name: 'XDEFI Wallet' },
   { id: '30', name: 'Solfare' },
-
 ];
 
 const popularWallets: Wallet[] = [
@@ -73,7 +70,6 @@ const popularWallets: Wallet[] = [
   { id: '7', name: 'Telegram' },
   { id: '8', name: 'Eternl Wallet' },
   { id: '9', name: 'Lace Wallet' },
-
 ];
 
 export default function AddManually() {
@@ -88,6 +84,9 @@ export default function AddManually() {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const textInputRef = useRef<TextInput>(null);
+  const keyboardHeightRef = useRef<number>(0);
+
+
 
   useEffect(() => {
     console.log('AddManually: Folder ID received:', folderId);
@@ -96,14 +95,7 @@ export default function AddManually() {
     }
   }, [folderId]);
 
-  useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+
 
   const filteredWallets = allWallets.filter(wallet =>
     wallet.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -112,6 +104,39 @@ export default function AddManually() {
   const hasExactMatch = allWallets.some(
     w => w.name.toLowerCase() === searchQuery.trim().toLowerCase()
   );
+
+  const [manualVisibleCount, setManualVisibleCount] = useState<number | null>(null);
+
+
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      keyboardHeightRef.current = e.endCoordinates.height;
+      console.log('⌨️ Keyboard SHOWN — height:', e.endCoordinates.height);
+      setKeyboardVisible(true);
+    });
+  
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      console.log('⌨️ Keyboard HIDDEN');
+      setKeyboardVisible(false);
+    });
+  
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+  
+  // Derive it live — reacts to every render automatically
+  const visibleCount = manualVisibleCount !== null
+  ? manualVisibleCount
+  : searchQuery !== ''
+    ? filteredWallets.length
+    : 0; // 👈 no search text = 0, so button always floats when keyboard is up with empty input
+
+
+  const shouldFloatButton = isKeyboardVisible && visibleCount <= 4;  
+  console.log('🔘 shouldFloatButton:', shouldFloatButton, '| visibleCount:', visibleCount, '| keyboardVisible:', isKeyboardVisible);
 
   const toggleSearch = () => {
     isSearching ? collapseSearch() : expandSearch();
@@ -161,7 +186,6 @@ export default function AddManually() {
   };
 
   const handleProceed = () => {
-    // If typing something not in list → treat as custom wallet
     if (searchQuery.trim() && !hasExactMatch) {
       const customName = searchQuery.trim();
       const customWallet: Wallet = {
@@ -169,23 +193,19 @@ export default function AddManually() {
         name: customName,
         isCustom: true,
       };
-
+  
       setSelectedWallets(prev => {
-        // Prevent duplicates
         if (prev.some(w => w.name.toLowerCase() === customName.toLowerCase())) {
           return prev;
         }
         return [...prev, customWallet];
       });
-
-      // Clear input after adding
+  
+      setManualVisibleCount(0); // 👈 force float after proceed
       setSearchQuery('');
-      textInputRef.current?.focus(); // keep keyboard open for more additions
+      textInputRef.current?.focus();
       return;
     }
-
-    // Normal flow (already selected from list)
-    // nothing extra here — button only shows "Proceed" when custom name is being typed
   };
 
   const handleFinalSubmit = async () => {
@@ -281,6 +301,8 @@ export default function AddManually() {
 
   const onButtonPress = shouldShowProceed ? handleProceed : handleFinalSubmit;
 
+  //const shouldFloatButton = filteredWallets.length <= 4  && isKeyboardVisible;
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -310,7 +332,12 @@ export default function AddManually() {
                 placeholder="Search wallets..."
                 placeholderTextColor="#B0B0B0"
                 value={searchQuery}
-                onChangeText={setSearchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  if (manualVisibleCount !== null) {
+                    setManualVisibleCount(null); // 👈 back to real count once typing resumes
+                  }
+                }}
                 onFocus={expandSearch}
               />
             </Animated.View>
@@ -412,9 +439,21 @@ export default function AddManually() {
             )}
           </View>
 
-          {/* Button area */}
+          {/* Button area – now with dynamic positioning */}
           {(selectedWallets.length > 0 || (isSearching && searchQuery.trim() !== '')) && (
-            <View className="pb-16">
+            <View
+              style={
+                shouldFloatButton
+                  ? {
+                      position: 'absolute',
+                      bottom: keyboardHeightRef.current + 16,
+                      left: 20,
+                      right: 20,
+                      zIndex: 10,
+                    }
+                  : { paddingBottom: 64 }
+              }
+            >
               <Button
                 text={isSubmitting ? "Adding Wallets..." : buttonText}
                 onPress={onButtonPress}
