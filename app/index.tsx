@@ -88,7 +88,7 @@ export default function Index() {
           opacity: buttonsOpacity,
         }}
       >
-        <Button text="Login" onPress={() => router.push('/sign-in')} outline />
+        <Button text="Login" onPress={() => router.push('/support')} outline />
         <Button text="Create Account" onPress={() => router.push('/sign-up')} />
       </Animated.View>
     </View>

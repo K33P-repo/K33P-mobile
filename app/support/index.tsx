@@ -376,26 +376,40 @@ export default function SupportScreen() {
         </View>
 
         <View className="flex-1">
-          <View className="px-4 mb-4">
-            {/* Search Bar */}
-            <View className="flex-row items-center bg-searchBg rounded-xl px-3 py-1">
-              <Image 
-                source={SearchIcon} 
-                className="w-5 h-5 mr-2" 
-                resizeMode="contain" 
-              />
-              <TextInput
-                ref={searchInputRef}
-                className="flex-1 ml-1 text-white font-sora text-sm"
-                placeholder="Search.."
-                placeholderTextColor="#B0B0B0"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onFocus={() => setIsKeyboardVisible(true)}
-              />
-            </View>
-          </View>
-
+        <View className="px-4 mb-4">
+        <View className="flex-row items-center bg-searchBg rounded-xl px-3 py-1">
+          <Image 
+            source={SearchIcon} 
+            className="w-5 h-5 mr-2" 
+            resizeMode="contain" 
+          />
+          <TextInput
+            ref={searchInputRef}
+            className="flex-1 text-white font-sora text-sm"
+            placeholder="Search..."
+            placeholderTextColor="#B0B0B0"
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              if (text.trim().length > 0) {
+                router.push({
+                  pathname: '/support/search',
+                  params: { query: text, from: 'support' } // ← pass origin
+                });
+              }
+            }}
+            onFocus={() => {
+              setIsKeyboardVisible(true);
+              // If empty → go back (optional – depends on your preference)
+            /*   if (searchQuery.trim() === '') {
+                router.back();
+              } */
+            }}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+        </View>
+      </View>
           {/* Search Results Carousel */}
           {searchQuery && searchResults.length > 0 && (
             <View className="flex-1">
