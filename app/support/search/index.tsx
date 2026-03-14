@@ -1,20 +1,24 @@
-import { BackIcon } from '@/assets/images/svg';
+import { BackIcon, PHONE } from '@/assets/images/svg';
+import Button from '@/components/Button';
 import helpContent from '@/constants/support.json';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Dimensions,
-    FlatList,
-    Image,
-    Keyboard,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Keyboard,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import SearchIcon from '../../../assets/images/search.png';
 
@@ -51,10 +55,12 @@ const highlightText = (text: string, query: string): JSX.Element => {
 const SearchResultCard = memo(
   ({
     item,
+    index,
     isActive,
     onPress,
   }: {
     item: SearchResult;
+    index: number;
     isActive: boolean;
     onPress: (route: string) => void;
   }) => (
@@ -62,10 +68,11 @@ const SearchResultCard = memo(
       style={{
         width: ITEM_WIDTH,
         marginRight: ITEM_SPACING,
+        marginLeft: index === 0 ? -ITEM_SPACING / 2 : 0,
         backgroundColor: '#222222',
         borderRadius: 12,
         opacity: isActive ? 1 : 0.6,
-        height: screenHeight * 0.66,
+        height: screenHeight * 0.68,
         overflow: 'hidden',
       }}
     >
@@ -75,8 +82,6 @@ const SearchResultCard = memo(
         style={{
           paddingHorizontal: 16,
           paddingVertical: 12,
-          borderBottomWidth: 1,
-          borderBottomColor: '#333',
         }}
       >
         <Text className="text-neutral100 font-space-mono text-xs">
@@ -88,7 +93,6 @@ const SearchResultCard = memo(
         style={{ flex: 1 }}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingTop: 12,
           paddingBottom: 40,
         }}
         showsVerticalScrollIndicator={true}
@@ -113,14 +117,20 @@ export default function SupportSearchScreen() {
   const [searchQuery, setSearchQuery] = useState(query);
   const [searchCurrent, setSearchCurrent] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      router.back();
+    }
+  }, [searchQuery, router]);
+
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
 
-  // Focus input on mount → keyboard opens automatically
   useEffect(() => {
     const timer = setTimeout(() => {
       inputRef.current?.focus();
-    }, 100); // small delay helps on some Android devices
+    }, 100);
 
     return () => clearTimeout(timer);
   }, []);
@@ -129,11 +139,12 @@ export default function SupportSearchScreen() {
     if (!searchQuery.trim()) return [];
 
     const results: SearchResult[] = [];
+    const lowerQuery = searchQuery.toLowerCase();
 
     helpContent.helpSections.forEach((section) => {
       const hasMatch = section.content.some((c) => {
         const full = (c.heading || '') + ' ' + c.text;
-        return full.toLowerCase().includes(searchQuery.toLowerCase());
+        return full.toLowerCase().includes(lowerQuery);
       });
 
       if (hasMatch) {
@@ -169,8 +180,36 @@ export default function SupportSearchScreen() {
       }
     });
 
-    return results;
-  }, [searchQuery]);
+    // Sort results based on the source screen
+    return results.sort((a, b) => {
+      const fromLower = from.toLowerCase();
+      
+      // If from support center, prioritize Account first
+      if (fromLower === 'support') {
+        if (a.section === 'Account') return -1;
+        if (b.section === 'Account') return 1;
+        return 0;
+      }
+      
+      // For specific screens, prioritize that section
+      if (fromLower.includes('account') && a.section === 'Account') return -1;
+      if (fromLower.includes('account') && b.section === 'Account') return 1;
+      
+      if (fromLower.includes('authentication') && a.section === 'Authentication') return -1;
+      if (fromLower.includes('authentication') && b.section === 'Authentication') return 1;
+      
+      if (fromLower.includes('payment') && a.section === 'Payment') return -1;
+      if (fromLower.includes('payment') && b.section === 'Payment') return 1;
+      
+      if ((fromLower.includes('lite') || fromLower.includes('lightpaper')) && a.section === 'Lightpaper') return -1;
+      if ((fromLower.includes('lite') || fromLower.includes('lightpaper')) && b.section === 'Lightpaper') return 1;
+      
+      if ((fromLower.includes('vault') || fromLower.includes('recovery')) && a.section === 'Vault Access') return -1;
+      if ((fromLower.includes('vault') || fromLower.includes('recovery')) && b.section === 'Vault Access') return 1;
+      
+      return 0;
+    });
+  }, [searchQuery, from]);
 
   useEffect(() => {
     setSearchCurrent(0);
@@ -199,6 +238,7 @@ export default function SupportSearchScreen() {
     ({ item, index }: { item: SearchResult; index: number }) => (
       <SearchResultCard
         item={item}
+        index={index} 
         isActive={index === searchCurrent}
         onPress={navigateToResult}
       />
@@ -216,10 +256,26 @@ export default function SupportSearchScreen() {
     return 'Support Center';
   };
 
-  // Back button: always go back (standard behavior)
-  // If input is empty → back goes back immediately
-  const handleBack = () => {
-    router.back();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isCalling, setIsCalling] = useState(false);
+
+  const openModal = () => setModalVisible(true);
+  const closeModal = () => setModalVisible(false);
+  const supportPhoneNumber = helpContent.support.phoneNumber;
+
+  const handleCallSupport = async () => {
+    setIsCalling(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const phoneUrl = `tel:${supportPhoneNumber}`;
+      const supported = await Linking.canOpenURL(phoneUrl);
+      if (supported) await Linking.openURL(phoneUrl);
+    } catch (error) {
+      console.error('Failed to open phone dialer:', error);
+    } finally {
+      setIsCalling(false);
+      closeModal();
+    }
   };
 
   return (
@@ -227,19 +283,23 @@ export default function SupportSearchScreen() {
       <View className="flex-1">
         
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-4">
-          <TouchableOpacity onPress={handleBack}>
-            <BackIcon />
+        <View className="mb-4 pb-4">
+          <TouchableOpacity onPress={() => router.back()} className="absolute left-4 z-10">
+            <BackIcon style={{ left: '50%', transform: [{ translateX: '-50%' }] }} />
           </TouchableOpacity>
 
-          <Text className="text-white font-sora-bold text-base">
-            {getHeaderTitle()}
-          </Text>
+          <View className="items-center justify-center">
+            <Text className="text-sm text-white font-sora-bold mt-3">
+              {getHeaderTitle()}
+            </Text>
+          </View>
 
-          <View style={{ width: 24 }} />
+          <TouchableOpacity onPress={openModal} className="absolute right-4 p-2">
+            <PHONE style={{ left: '50%', transform: [{ translateX: '-50%' }] }} />
+          </TouchableOpacity>
         </View>
 
-        {/* Search Input – pre-filled + auto-focus */}
+        {/* Search Input */}
         <View className="px-4 mb-4">
           <View className="flex-row items-center bg-searchBg rounded-xl px-3 py-1">
             <Image source={SearchIcon} className="w-5 h-5 mr-2" resizeMode="contain" />
@@ -250,7 +310,7 @@ export default function SupportSearchScreen() {
               placeholderTextColor="#B0B0B0"
               value={searchQuery}
               onChangeText={setSearchQuery}
-              autoFocus={false} // controlled by useEffect above
+              autoFocus={false}
               returnKeyType="search"
             />
           </View>
@@ -282,29 +342,29 @@ export default function SupportSearchScreen() {
                 windowSize={3}
               />
 
-              <View className="flex-row items-center justify-between px-6 py-6">
+              <View className="flex-row items-center justify-between px-5 mt-2 mb-8">
                 <TouchableOpacity
                   onPress={goToPrev}
-                  disabled={searchCurrent === 0}
                   activeOpacity={0.7}
-                  hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                  disabled={searchCurrent === 0}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 >
                   <Ionicons
                     name="chevron-back-outline"
-                    size={36}
-                    color={searchCurrent === 0 ? '#444' : '#fff'}
+                    size={20}
+                    color={searchCurrent === 0 ? '#555' : '#fff'}
                   />
                 </TouchableOpacity>
 
-                <View className="flex-row gap-4 items-center bg-neutral800 rounded-full px-6 py-3">
-                  {searchResults.map((_, idx) => (
+                <View className="flex-row gap-3 items-center bg-neutral700 rounded-full px-4 py-2">
+                  {searchResults.map((_, index) => (
                     <View
-                      key={idx}
+                      key={index}
                       style={{
-                        width: idx === searchCurrent ? 14 : 8,
+                        width: index === searchCurrent ? 16 : 8,
                         height: 8,
-                        borderRadius: 4,
-                        backgroundColor: idx === searchCurrent ? '#fff' : '#666',
+                        borderRadius: 8,
+                        backgroundColor: index === searchCurrent ? '#ffffff' : '#B0B0B0',
                       }}
                     />
                   ))}
@@ -312,21 +372,21 @@ export default function SupportSearchScreen() {
 
                 <TouchableOpacity
                   onPress={goToNext}
-                  disabled={searchCurrent === searchResults.length - 1}
                   activeOpacity={0.7}
-                  hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                  disabled={searchCurrent === searchResults.length - 1}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 >
                   <Ionicons
                     name="chevron-forward-outline"
-                    size={36}
-                    color={searchCurrent === searchResults.length - 1 ? '#444' : '#fff'}
+                    size={20}
+                    color={searchCurrent === searchResults.length - 1 ? '#555' : '#fff'}
                   />
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
             <View className="flex-1 justify-center items-center px-8">
-              <Text className="text-neutral200 font-sora text-base text-center">
+              <Text className="text-neutral200 font-sora text-sm text-center">
                 No results found for "{searchQuery}"
               </Text>
             </View>
@@ -339,6 +399,30 @@ export default function SupportSearchScreen() {
           </View>
         )}
       </View>
+
+      {/* Phone modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={closeModal}
+      >
+        <Pressable onPress={closeModal} className="absolute inset-0 bg-black/60" />
+        <View className="flex-1 justify-center items-center">
+          <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
+            <Text className="text-white font-sora text-sm text-center mb-6">
+              {supportPhoneNumber}
+            </Text>
+            {isCalling ? (
+              <View className="py-3 rounded-xl items-center justify-center bg-main">
+                <ActivityIndicator size="small" color="#000000" />
+              </View>
+            ) : (
+              <Button text="Call Support" onPress={handleCallSupport} />
+            )}
+          </View>
+        </View>
+      </Modal>
     </Pressable>
   );
 }

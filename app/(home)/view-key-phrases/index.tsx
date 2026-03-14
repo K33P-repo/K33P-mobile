@@ -256,6 +256,9 @@ export default function ViewKey() {
         <TouchableOpacity className="z-10" onPress={() => router.back()}>
           <BackIcon width={40} height={40} />
         </TouchableOpacity>
+
+      
+
       </View>
 
       <View className="flex-row mb-8 mt-3 bg-neutral700 rounded-xl">
@@ -341,6 +344,7 @@ export default function ViewKey() {
             <Text className="text-white text-center p-4">No phrases found for this wallet.</Text>
           )}
         </View>
+        
 
         {keyCount === '24' && displayedKeyType === '24' && (
           <View className="flex-row items-center justify-between mt-10 px-2">
@@ -362,7 +366,10 @@ export default function ViewKey() {
             <TouchableOpacity onPress={() => setPage(2)} disabled={isLastPage} className='p-2'>
               <Image source={ArrowRight} style={{ opacity: isLastPage ? 0.5 : 1 }} />
             </TouchableOpacity>
+
+
           </View>
+
         )}
       </ScrollView>
     </View>

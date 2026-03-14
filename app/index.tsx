@@ -87,8 +87,9 @@ export default function Index() {
           transform: [{ translateY: buttonsPosition }],
           opacity: buttonsOpacity,
         }}
-      >
-        <Button text="Login" onPress={() => router.push('/support')} outline />
+      >        
+
+        <Button text="Login" onPress={() => router.push('/sign-in')} outline />
         <Button text="Create Account" onPress={() => router.push('/sign-up')} />
       </Animated.View>
     </View>
