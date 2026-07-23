@@ -56,3 +56,11 @@ export { default as PIN_KEEPLOCK } from './pin-keeplock.svg';
 export { default as VOICE_KEEPLOCK } from './voice-keeplock.svg';
 
 
+export { default as SLIDE_1 } from './slide1.svg';
+export { default as CAROUSEL_1 } from './Slide1.svg';
+export { default as SLIDE_2 } from './slide2.svg';
+export { default as CAROUSEL_2 } from './Slide2.svg';
+export { default as SLIDE_3 } from './slide3.svg';
+export { default as CAROUSEL_3 } from './Slide3.svg';
+
+

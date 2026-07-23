@@ -1,6 +1,7 @@
 import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
 import { usePhoneStore } from '@/store/usePhoneStore';
+import { sendOTP } from '@/utils/api';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, Keyboard, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -20,6 +21,8 @@ export default function PhoneEntryScreen() {
   const [isTouched, setIsTouched] = useState(false);
   const [showKeypad, setShowKeypad] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Format phone number as +xxx-xxx-xxxx-xxx
   useEffect(() => {
@@ -44,43 +47,47 @@ export default function PhoneEntryScreen() {
   }, [phoneNumber, setFormattedNumber]); // Dependency changed from rawPhoneNumber
 
   useEffect(() => {
-    if (phoneNumber.length == 13) {
-      setIsValid(true);
-    } else {
-      setIsValid(false);
-    }
+    setIsValid(/^234[0-9]{10}$/.test(phoneNumber));
   }, [phoneNumber]);
 
   const handlePhoneChange = (text: string) => {
     const cleanedNumber = text.replace(/\D/g, '');
-    setPhoneNumber(cleanedNumber); // Changed from setRawPhoneNumber
-    setIsValid(cleanedNumber.length === 13);
+    setPhoneNumber(cleanedNumber);
+    setIsValid(/^234[0-9]{10}$/.test(cleanedNumber));
     setIsTouched(true);
   };
 
   const handleKeyPress = (num: string) => {
-    const newNumber = phoneNumber + num; // Changed from rawPhoneNumber
+    const newNumber = phoneNumber + num;
     if (newNumber.length <= 13) {
-      setPhoneNumber(newNumber); // Changed from setRawPhoneNumber
-      setIsValid(newNumber.length === 13);
+      setPhoneNumber(newNumber);
+      setIsValid(/^234[0-9]{10}$/.test(newNumber));
       setIsTouched(true);
     }
   };
 
   const handleBackspace = () => {
-    const newNumber = phoneNumber.slice(0, -1); // Changed from rawPhoneNumber
-    setPhoneNumber(newNumber); // Changed from setRawPhoneNumber
-    setIsValid(newNumber.length === 13);
+    const newNumber = phoneNumber.slice(0, -1);
+    setPhoneNumber(newNumber);
+    setIsValid(/^234[0-9]{10}$/.test(newNumber));
     setIsTouched(true);
   };
 
-  const handleProceed = () => {
-    console.log('Entered phone number:', formattedNumber); // Changed from formattedPhoneNumber
-    router.push('/sign-in/otp');
+  const handleProceed = async () => {
+    if (!isValid || isLoading) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await sendOTP(phoneNumber);
+      router.push('/sign-in-nok/otp');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleNOK = () => {
-    console.log('Login as NOK');
     router.push('/sign-in-nok');
   };
 
@@ -139,7 +146,7 @@ export default function PhoneEntryScreen() {
 
         {showError && (
           <Text className="text-error500 font-sora text-center text-sm p-2">
-            Phone number must be 13 digits (including country code)
+            Phone number must start with 234 and be 12 or 13 digits
           </Text>
         )}
       </View>

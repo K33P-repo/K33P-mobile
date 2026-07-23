@@ -2,6 +2,7 @@ import { BackIcon, Lock_1, Lock_2 } from '@/assets/images/svg';
 import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
 import { usePhoneStore } from '@/store/usePhoneStore';
+import { sendOTP, verifyOTP } from '@/utils/api';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -10,42 +11,114 @@ export default function OTPEntryScreen() {
   const router = useRouter();
   const [otp, setOtp] = useState(['', '', '', '', '']);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [timer, setTimer] = useState(120); // 2 minutes in seconds
+  const [timer, setTimer] = useState(1800); // 30 minutes
   const [isResendDisabled, setIsResendDisabled] = useState(true);
   const [isValid, setIsValid] = useState(false);
   const [isError, setIsError] = useState(false);
   const [showKeypad, setShowKeypad] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const otpInputs = useRef<(TextInput | null)[]>([]);
+  const { phoneNumber, formattedNumber } = usePhoneStore();
 
-  const { formattedNumber } = usePhoneStore();
+  const triggerSendOTP = async () => {
+    if (!phoneNumber) return;
 
-  // Countdown timer
+    try {
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      const response = await sendOTP(phoneNumber);
+
+      // === LOG FULL RESPONSE FOR DEBUGGING ===
+      console.log('📨 sendOTP Full Response:', JSON.stringify(response, null, 2));
+
+      const message = response?.message?.toLowerCase() ||
+        response?.data?.message?.toLowerCase() ||
+        response?.error?.toLowerCase() || '';
+
+      // Check if OTP was already sent and still valid
+      if (
+        message.includes('already sent') ||
+        message.includes('already been sent') ||
+        response?.status === 'already_sent' ||
+        response?.otpAlreadySent === true ||
+        response?.remainingTime
+      ) {
+        console.log('✅ OTP already sent and active. Proceeding to verification.');
+
+        // Use backend remaining time if provided
+        if (response?.remainingTime && typeof response.remainingTime === 'number') {
+          setTimer(Math.max(60, response.remainingTime));
+        }
+
+        setIsResendDisabled(true);
+        setIsError(false);
+        return; // Don't treat as error
+      }
+
+      // Fresh OTP sent
+      console.log('✅ New OTP sent successfully.');
+      setTimer(1800);
+      setIsResendDisabled(true);
+
+    } catch (error: any) {
+      console.log('❌ sendOTP Error Response:', {
+        message: error.message,
+        response: error.response?.data,
+        fullError: error
+      });
+
+      const errorMsg = error?.response?.data?.message || error?.message || '';
+      const lowerMsg = errorMsg.toLowerCase();
+
+      if (lowerMsg.includes('already sent') || lowerMsg.includes('already been sent')) {
+        console.log('✅ OTP already active (detected in error). Proceeding.');
+        setTimer(1800);
+        setIsResendDisabled(true);
+        setIsError(false);
+      } else {
+        setErrorMessage(errorMsg || 'Failed to send OTP. Please try again.');
+        setIsError(true);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial OTP send / check
+  useEffect(() => {
+    triggerSendOTP();
+  }, []);
+
+  // Timer countdown
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (timer > 0) {
+    if (timer > 0 && isResendDisabled) {
       interval = setInterval(() => {
-        setTimer(prev => prev - 1);
+        setTimer(prev => {
+          const newTime = prev - 1;
+          if (newTime <= 0) {
+            setIsResendDisabled(false);
+            return 0;
+          }
+          return newTime;
+        });
       }, 1000);
-    } else {
-      setIsResendDisabled(false);
     }
     return () => clearInterval(interval);
-  }, [timer]);
+  }, [timer, isResendDisabled]);
 
-  // Check OTP validity
+  // OTP validation
   useEffect(() => {
     const otpString = otp.join('');
     if (otpString.length === 5) {
-      if (otpString === '00000') {
-        setIsValid(true);
-        setIsError(false);
-      } else {
-        setIsValid(false);
-        setIsError(true);
-      }
+      setIsValid(true);
+      setIsError(false);
+      setErrorMessage(null);
     } else {
       setIsValid(false);
-      setIsError(false);
     }
   }, [otp]);
 
@@ -54,7 +127,6 @@ export default function OTPEntryScreen() {
       const newOtp = [...otp];
       newOtp[currentIndex] = num;
       setOtp(newOtp);
-      
       if (currentIndex < 4) {
         setCurrentIndex(currentIndex + 1);
         otpInputs.current[currentIndex + 1]?.focus();
@@ -76,15 +148,30 @@ export default function OTPEntryScreen() {
     }
   };
 
-  const handleResend = () => {
-    setTimer(120);
+  const handleResend = async () => {
+    setTimer(1800);
     setIsResendDisabled(true);
-    // Add your resend OTP logic here
+    await triggerSendOTP();
   };
 
-  const handleProceed = () => {
-    if (isValid) {
-      router.push('/sign-up/pinsetup');
+  const handleProceed = async () => {
+    const otpString = otp.join('');
+    if (otpString.length !== 5 || isLoading) return;
+
+    try {
+      setIsLoading(true);
+      setErrorMessage(null);
+      setIsError(false);
+
+      await verifyOTP(phoneNumber, otpString);
+      router.replace('/sign-up/pinsetup');
+    } catch (error: any) {
+      setIsError(true);
+      setErrorMessage(error.message || 'Invalid OTP. Please try again.');
+      setOtp(['', '', '', '', '']);
+      setCurrentIndex(0);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -100,35 +187,18 @@ export default function OTPEntryScreen() {
         {/* Header */}
         <View className="relative flex-row items-center justify-start mb-12">
           <TouchableOpacity className="z-10" onPress={() => router.back()}>
-          <BackIcon width={40} height={40} />
-
-</TouchableOpacity>
-        {
-          isValid ? (
-            <Lock_2 
-            style={{
-              position: 'absolute',
-              left: '50%',
-              transform: [{ translateX: '-50%' }]
-            }}
-            />
+            <BackIcon width={40} height={40} />
+          </TouchableOpacity>
+          {isValid ? (
+            <Lock_2 style={{ position: 'absolute', left: '50%', transform: [{ translateX: '-50%' }] }} />
           ) : (
-            <Lock_1 
-            style={{
-              position: 'absolute',
-              left: '50%',
-              transform: [{ translateX: '-50%' }]
-            }}
-            />
-          )
-        }
+            <Lock_1 style={{ position: 'absolute', left: '50%', transform: [{ translateX: '-50%' }] }} />
+          )}
         </View>
 
         {/* Content */}
         <View className="flex-1">
-          <Text className="text-white font-sora-bold text-sm text-center">
-            Enter OTP
-          </Text>
+          <Text className="text-white font-sora-bold text-sm text-center">Enter OTP</Text>
           <Text className="text-neutral200 font-sora text-sm text-center mb-8 px-8 py-2">
             A 5-digit OTP has been sent to {formattedNumber}
           </Text>
@@ -147,17 +217,16 @@ export default function OTPEntryScreen() {
               >
                 <TextInput
                   ref={ref => (otpInputs.current[index] = ref)}
-                  className={`w-11 h-11 mx-2 rounded-lg text-center font-sora-bold text-sm border ${
-                    isError 
+                  className={`w-11 h-11 mx-2 rounded-lg text-center font-sora-bold text-sm border ${isError
                       ? 'border-error500 text-error500 bg-[#FCC5C1]'
-                      : isValid 
+                      : isValid
                         ? 'text-success500 border-neutral200'
-                        : digit 
+                        : digit
                           ? 'border-white text-white'
                           : 'border-neutral200 text-neutral200'
-                  }`}
+                    }`}
                   value={digit}
-                  onChangeText={() => {}}
+                  onChangeText={() => { }}
                   keyboardType="numeric"
                   maxLength={1}
                   showSoftInputOnFocus={false}
@@ -170,51 +239,38 @@ export default function OTPEntryScreen() {
             ))}
           </View>
 
-          {isError && (
-            <Text className="text-error500 font-sora text-center text-sm mb-4">
-              Incorrect OTP. Please try again.
+          {(isError || errorMessage) && (
+            <Text className="text-error500 font-sora text-center text-sm mb-4 px-4">
+              {errorMessage || 'Incorrect OTP. Please try again.'}
             </Text>
           )}
         </View>
 
-        {/* Resend OTP and Proceed Button */}
         <View className={`pb-16 ${showKeypad ? 'mb-72' : ''}`}>
-          <TouchableOpacity 
+          <TouchableOpacity
             className="mb-4 items-center"
             onPress={handleResend}
-            disabled={isResendDisabled}
+            disabled={isResendDisabled || isLoading}
           >
-            <Text 
-              className={`font-sora text-sm ${
-                isResendDisabled ? 'text-neutral100' : 'text-white'
-              }`}
-            >
+            <Text className={`font-sora text-sm ${isResendDisabled || isLoading ? 'text-neutral100' : 'text-white'}`}>
               Resend OTP {isResendDisabled && `in ${formatTime(timer)}`}
             </Text>
           </TouchableOpacity>
-          
+
           <Button
-            text="Proceed"
+            text={isLoading ? "Verifying..." : "Proceed"}
             onPress={handleProceed}
-            isDisabled={!isValid}
+            isDisabled={!isValid || isLoading}
           />
         </View>
 
-        {/* Dismiss Keypad Overlay */}
+        {/* Keypad */}
         {showKeypad && (
-        <TouchableWithoutFeedback
-          onPress={() => {
-            setShowKeypad(false);
-          }}
-        >
-          <View 
-            className="absolute top-0 left-0 right-0"
-            style={{ bottom: 400 }} // Adjust this value based on your keypad height
-          />
-        </TouchableWithoutFeedback>
-      )}
+          <TouchableWithoutFeedback onPress={() => setShowKeypad(false)}>
+            <View className="absolute top-0 left-0 right-0" style={{ bottom: 400 }} />
+          </TouchableWithoutFeedback>
+        )}
 
-        {/* Custom Numeric Keypad */}
         <NumericKeypad
           onKeyPress={handleKeyPress}
           onBackspace={handleBackspace}

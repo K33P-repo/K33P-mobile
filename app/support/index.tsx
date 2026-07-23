@@ -3,14 +3,11 @@ import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
   Keyboard,
   Linking,
-  Modal,
-  Pressable,
   Text,
   TextInput,
   TouchableOpacity,
@@ -21,6 +18,7 @@ import SearchIcon from '../../assets/images/search.png';
 
 import { BackIcon, PHONE } from '@/assets/images/svg';
 import Carousel, { Slide } from '@/components/Carousel';
+import ContactSupportModal from '@/components/ContactSupportModal';
 import DraggableBottomSheet, { DraggableBottomSheetRef } from '@/components/Draggablebottomsheet';
 import helpContent from '@/constants/support.json';
 
@@ -109,11 +107,11 @@ const ITEM_SPACING = screenWidth * 0.02;
 
 const highlightText = (text: string, query: string): JSX.Element => {
   if (!query) return <Text className="text-white">{text}</Text>;
-  
+
   const parts = text.split(new RegExp(`(${query})`, 'gi'));
   return (
     <Text className="text-white">
-      {parts.map((part, i) => 
+      {parts.map((part, i) =>
         part.toLowerCase() === query.toLowerCase() ? (
           <Text key={i} className="text-main">{part}</Text>
         ) : (
@@ -163,13 +161,13 @@ export default function SupportScreen() {
 
   const handleCallSupport = async () => {
     setIsCalling(true);
-    
+
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       const phoneUrl = `tel:${supportPhoneNumber}`;
       const supported = await Linking.canOpenURL(phoneUrl);
-      
+
       if (supported) {
         await Linking.openURL(phoneUrl);
       } else {
@@ -184,8 +182,8 @@ export default function SupportScreen() {
   };
 
   const toggleItem = (id: number) => {
-    setItems(items.map(item => 
-      item.id === id 
+    setItems(items.map(item =>
+      item.id === id
         ? { ...item, expanded: !item.expanded }
         : { ...item, expanded: false }
     ));
@@ -199,7 +197,7 @@ export default function SupportScreen() {
     if (!query) {
       return supportItems.map(item => ({ ...item, expanded: false }));
     }
-    return supportItems.filter(item => 
+    return supportItems.filter(item =>
       item.title.toLowerCase().includes(query.toLowerCase())
     ).map(item => ({ ...item, expanded: false }));
   };
@@ -225,7 +223,7 @@ export default function SupportScreen() {
           return (
             <View key={index} className="mb-4">
               {contentItem.heading && (
-                <Text className="text-main font-sora-bold text-sm mb-2" style={{textDecorationLine: 'underline'}}>
+                <Text className="text-main font-sora-bold text-sm mb-2" style={{ textDecorationLine: 'underline' }}>
                   {highlightText(contentItem.heading, query)}
                 </Text>
               )}
@@ -315,13 +313,13 @@ export default function SupportScreen() {
             About K33P {item.title}
           </Text>
         </TouchableOpacity>
-        
+
         <FlatList
           data={item.highlightedContent}
           keyExtractor={(_, idx) => `content-${item.id}-${idx}`}
           renderItem={({ item: content }) => content}
           showsVerticalScrollIndicator={true}
-          contentContainerStyle={{ 
+          contentContainerStyle={{
             paddingHorizontal: 16,
             paddingTop: 8,
             paddingBottom: 40,
@@ -362,7 +360,7 @@ export default function SupportScreen() {
             </Text>
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={openModal}
             className="absolute right-4 p-2"
           >
@@ -376,40 +374,40 @@ export default function SupportScreen() {
         </View>
 
         <View className="flex-1">
-        <View className="px-4 mb-4">
-        <View className="flex-row items-center bg-searchBg rounded-xl px-3 py-1">
-          <Image 
-            source={SearchIcon} 
-            className="w-5 h-5 mr-2" 
-            resizeMode="contain" 
-          />
-          <TextInput
-            ref={searchInputRef}
-            className="flex-1 text-white font-sora text-sm"
-            placeholder="Search..."
-            placeholderTextColor="#B0B0B0"
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              if (text.trim().length > 0) {
-                router.push({
-                  pathname: '/support/search',
-                  params: { query: text, from: 'support' } // ← pass origin
-                });
-              }
-            }}
-            onFocus={() => {
-              setIsKeyboardVisible(true);
-              // If empty → go back (optional – depends on your preference)
-            /*   if (searchQuery.trim() === '') {
-                router.back();
-              } */
-            }}
-            autoCapitalize="none"
-            returnKeyType="search"
-          />
-        </View>
-      </View>
+          <View className="px-4 mb-4">
+            <View className="flex-row items-center bg-searchBg rounded-xl px-3 py-1">
+              <Image
+                source={SearchIcon}
+                className="w-5 h-5 mr-2"
+                resizeMode="contain"
+              />
+              <TextInput
+                ref={searchInputRef}
+                className="flex-1 text-white font-sora text-sm"
+                placeholder="Search..."
+                placeholderTextColor="#B0B0B0"
+                value={searchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  if (text.trim().length > 0) {
+                    router.push({
+                      pathname: '/support/search',
+                      params: { query: text, from: 'support' } // ← pass origin
+                    });
+                  }
+                }}
+                onFocus={() => {
+                  setIsKeyboardVisible(true);
+                  // If empty → go back (optional – depends on your preference)
+                  /*   if (searchQuery.trim() === '') {
+                      router.back();
+                    } */
+                }}
+                autoCapitalize="none"
+                returnKeyType="search"
+              />
+            </View>
+          </View>
           {/* Search Results Carousel */}
           {searchQuery && searchResults.length > 0 && (
             <View className="flex-1">
@@ -504,26 +502,25 @@ export default function SupportScreen() {
               <View className="mt-8 px-2 flex-1">
                 {items.map((item) => (
                   <View key={item.id} className="mb-4">
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => toggleItem(item.id)}
                       className="flex-row justify-between items-center py-3 px-4 bg-neutral700 rounded-lg"
                     >
-                      <Text 
-                        className={`font-sora-bold text-sm ${
-                          item.expanded ? 'text-white' : 'text-white'
-                        }`}
+                      <Text
+                        className={`font-sora-bold text-sm ${item.expanded ? 'text-white' : 'text-white'
+                          }`}
                       >
                         {item.title}
                       </Text>
-                      <AntDesign 
-                        name={item.expanded ? 'arrow-down' : 'arrow-right'} 
-                        size={16} 
+                      <AntDesign
+                        name={item.expanded ? 'arrow-down' : 'arrow-right'}
+                        size={16}
                         color='#ffffff'
                       />
                     </TouchableOpacity>
                     {item.expanded && (
                       <View className="mt-5 px-4">
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           onPress={() => navigateToItem(item.route)}
                           className="py-3 px-3 bg-[#222222] rounded-lg"
                         >
@@ -556,10 +553,13 @@ export default function SupportScreen() {
         >
           {selectedSlide && (
             <>
-              <Image
-                source={selectedSlide.modalImage}
-                className="w-full h-[30%] object-cover rounded-t-3xl"
-              />
+              <View className="w-full h-[30%] overflow-hidden rounded-t-3xl">
+                <selectedSlide.modalImage
+                  width="100%"
+                  height="100%"
+                  preserveAspectRatio="xMidYMid slice" // mimics object-cover behavior
+                />
+              </View>
               <View className="px-6 py-4">
                 <Text className="text-neutral100 font-space-mono text-sm mb-2">
                   {selectedSlide.label}
@@ -572,8 +572,8 @@ export default function SupportScreen() {
                 </Text>
               </View>
               <View className="absolute bottom-16 left-0 right-0 px-6">
-                <Button 
-                  text="Close" 
+                <Button
+                  text="Close"
                   onPress={closeCarouselModal}
                   outline
                 />
@@ -582,35 +582,8 @@ export default function SupportScreen() {
           )}
         </DraggableBottomSheet>
 
-        {/* Phone Modal — kept exactly as original */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={closeModal}
-        >
-          <Pressable 
-            onPress={closeModal} 
-            className="absolute inset-0 bg-black/60"
-          />
-          <View className="flex-1 justify-center items-center">
-            <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
-              <Text className="text-white font-sora text-sm text-center mb-6">
-                +234 813 500 5000
-              </Text>
-              {isCalling ? (
-                <View className="py-3 rounded-xl items-center justify-center bg-main">
-                  <ActivityIndicator size="small" color="#000000" />
-                </View>
-              ) : (
-                <Button 
-                  text="Call Support" 
-                  onPress={handleCallSupport}
-                />
-              )}
-            </View>
-          </View>
-        </Modal>
+        <ContactSupportModal visible={modalVisible} onClose={closeModal} />
+
       </View>
     </TouchableWithoutFeedback>
   );

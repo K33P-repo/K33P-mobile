@@ -21,20 +21,26 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.deepurple.k33pmobil"
+      "bundleIdentifier": "com.deepurple.k33pmobil",
+      "runtimeVersion": "1.0.0"
     },
     "android": {
+      "versionCode": 2,
       "minSdkVersion": 26,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF",
-        "softwareKeyboardLayoutMode": "resize"
+        "foregroundImage": "./assets/images/icon-k33p.png",
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.deepurple.k33pmobil",
       "permissions": [
         "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -64,6 +70,7 @@
       ],
       "expo-web-browser"
     ],
+    "owner": "k33p",
     "experiments": {
       "typedRoutes": true
     },
@@ -73,6 +80,8 @@
         "projectId": "362c8196-eb52-436b-ac1f-835afb0f039f"
       }
     },
-    "owner": "k33p"
+    "updates": {
+      "url": "https://u.expo.dev/362c8196-eb52-436b-ac1f-835afb0f039f"
+    }
   }
 }

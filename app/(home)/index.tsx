@@ -6,12 +6,11 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Image,
   Modal,
   Pressable,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 import { usePhoneStore } from '@/store/usePhoneStore';
@@ -51,10 +50,10 @@ export default function Index() {
 
     console.log('HomeScreen - Username is empty in store, fetching from API...');
     setIsFetchingUsername(true);
-    
+
     try {
       const userData = await getUsername();
-      
+
       if (userData && userData.username) {
         console.log('HomeScreen - Username fetched from API:', userData.username);
         setUsername(userData.username);
@@ -75,14 +74,14 @@ export default function Index() {
   const checkTokenValidity = useCallback(async (): Promise<boolean> => {
     const { token, clearAuthData } = useAuthStore.getState();
     console.log(token);
-    
-    
+
+
     if (!token) {
       console.log('No token found');
       router.replace('/sign-in');
       return false;
     }
-  
+
     // Use the utility function from api.ts
     if (isTokenExpired(token)) {
       console.log('Token is expired');
@@ -90,8 +89,8 @@ export default function Index() {
         'Session Expired',
         'Your session has expired. Please sign in again.',
         [
-          { 
-            text: 'OK', 
+          {
+            text: 'OK',
             onPress: () => {
               clearAuthData();
               router.replace('/sign-in');
@@ -101,36 +100,36 @@ export default function Index() {
       );
       return false;
     }
-  
+
     return true;
   }, [router]);
-  
+
   const checkWalletFolders = useCallback(async () => {
     try {
       setIsCheckingWallets(true);
-      
+
       // First check token validity using our enhanced function
       const isTokenValid = await checkTokenValidity();
       if (!isTokenValid) {
         return;
       }
-  
+
       // Use the API functions - they now handle token expiration internally
       const foldersResponse = await getWalletFolders();
-      
+
       if (foldersResponse.success && foldersResponse.data) {
         const { folders, totalWallets } = foldersResponse.data;
-        
+
         console.log('Wallet folders check:', {
           folderCount: folders.length,
           totalWallets: totalWallets
         });
-  
+
         // If no folders exist, create a default one
         if (folders.length === 0) {
           console.log('No folders found, creating default folder...');
           const createFolderResponse = await createFolder('K33P Wallets');
-          
+
           if (createFolderResponse.success && createFolderResponse.data) {
             console.log('Default folder created successfully:', createFolderResponse.data.id);
             // Store the default folder ID
@@ -148,12 +147,12 @@ export default function Index() {
           setDefaultFolderId(firstFolder.id);
           console.log('Default folder ID set:', firstFolder.id);
         }
-  
+
         // Check if any folder has wallets
-        const hasWallets = folders.some(folder => 
+        const hasWallets = folders.some(folder =>
           folder.items && folder.items.length > 0
         );
-  
+
         if (hasWallets) {
           console.log('Wallets found, redirecting to add-to-wallet screen');
           router.replace('/(home)/add-to-wallet');
@@ -167,7 +166,7 @@ export default function Index() {
       }
     } catch (error: any) {
       console.log('Error checking wallet folders:', error);
-      
+
       // Check if it's an authentication error
       if (error.message?.includes('Authentication required')) {
         // Token is invalid/expired, redirect to login
@@ -178,7 +177,7 @@ export default function Index() {
         );
         return;
       }
-      
+
       // Handle other errors
       Alert.alert('Error', 'Failed to check wallet folders. Please try again.');
     } finally {
@@ -220,7 +219,7 @@ export default function Index() {
     setSelectedSlide(item);
     setTimeout(() => carouselSheetRef.current?.open(), 0);  // ← actually opens the sheet
   }, []);
-  
+
   const closeCarouselModal = useCallback(() => {
     carouselSheetRef.current?.close();  // ← actually closes the sheet
   }, []);
@@ -309,14 +308,14 @@ export default function Index() {
           }}
         />
       </TouchableOpacity>
-      
+
       <TouchableOpacity onPress={() => router.push('/profile')} className="absolute right-4">
         <PROFILE
           style={{
             left: '50%',
             transform: [{ translateX: '-50%' }],
           }}
-        />      
+        />
       </TouchableOpacity>
 
       {/* Main Content */}
@@ -337,8 +336,8 @@ export default function Index() {
         <View className="items-center mb-4">
           <Text className="text-neutral200 font-sora-semibold text-sm">Connect</Text>
         </View>
-        <Button 
-          text="Add New Wallet" 
+        <Button
+          text="Add New Wallet"
           onPress={openModal}
           loading={isCheckingWallets || !defaultFolderId}
           disabled={isCheckingWallets || !defaultFolderId}
@@ -368,17 +367,17 @@ export default function Index() {
                 text="Scan Device"
                 onPress={handleScanDevice}
               />
-              
+
               {/* Show message when Scan Device is clicked */}
-             
-              
+
+
               <Button
                 text="Add Manually"
                 onPress={navigateToAddManually}
                 outline
               />
 
-            {scanDeviceMessage && (
+              {scanDeviceMessage && (
                 <View className="px-4 py-2">
                   <Text className="text-neutral200 font-sora text-xs text-center">
                     This feature is currently unavailable. Please add manually.
@@ -390,40 +389,42 @@ export default function Index() {
         </View>
       </Modal>
 
-       {/* ── Carousel Item — DraggableBottomSheet (drag to close) ── */}
-       <DraggableBottomSheet
-          ref={carouselSheetRef}
-          snapHeight="70%"
-          backgroundColor="#111111"
-          onClose={() => setSelectedSlide(null)}
-        >
-          {selectedSlide && (
-            <>
-              <Image
-                source={selectedSlide.modalImage}
-                className="w-full h-[30%] object-cover rounded-t-3xl"
+      <DraggableBottomSheet
+        ref={carouselSheetRef}
+        snapHeight="70%"
+        backgroundColor="#111111"
+        onClose={() => setSelectedSlide(null)}
+      >
+        {selectedSlide && (
+          <>
+            <View className="w-full h-[30%] overflow-hidden rounded-t-3xl">
+              <selectedSlide.modalImage
+                width="100%"
+                height="100%"
+                preserveAspectRatio="xMidYMid slice"
               />
-              <View className="px-6 py-4">
-                <Text className="text-neutral100 font-space-mono text-sm mb-2">
-                  {selectedSlide.label}
-                </Text>
-                <Text className="text-white font-sora-bold text-lg mb-2">
-                  {selectedSlide.headline}
-                </Text>
-                <Text className="text-neutral200 font-sora text-sm">
-                  {selectedSlide.description}
-                </Text>
-              </View>
-              <View className="absolute bottom-16 left-0 right-0 px-6">
-                <Button 
-                  text="Close" 
-                  onPress={closeCarouselModal}
-                  outline
-                />
-              </View>
-            </>
-          )}
-        </DraggableBottomSheet>
+            </View>
+            <View className="px-6 py-4">
+              <Text className="text-neutral100 font-space-mono text-sm mb-2">
+                {selectedSlide.label}
+              </Text>
+              <Text className="text-white font-sora-bold text-lg mb-2">
+                {selectedSlide.headline}
+              </Text>
+              <Text className="text-neutral200 font-sora text-sm">
+                {selectedSlide.description}
+              </Text>
+            </View>
+            <View className="absolute bottom-16 left-0 right-0 px-6">
+              <Button
+                text="Close"
+                onPress={closeCarouselModal}
+                outline
+              />
+            </View>
+          </>
+        )}
+      </DraggableBottomSheet>
     </View>
   );
 }

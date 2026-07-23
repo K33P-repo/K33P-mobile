@@ -1,7 +1,7 @@
 import Button from '@/components/Button';
 import useCustomFonts from '@/hooks/useCustomFonts';
-import { Video } from 'expo-av';
 import { useRouter } from 'expo-router';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useEffect, useRef } from 'react';
 import { Animated, View } from 'react-native';
 import { K33PLogo } from '../assets/images/svg';
@@ -10,6 +10,10 @@ import './global.css';
 export default function Index() {
   const router = useRouter();
   const { fontsLoaded, onLayoutRootView } = useCustomFonts();
+  const player = useVideoPlayer(require('../assets/animation/numbers.mp4'), (p) => {
+    p.loop = true;
+    p.play();
+  });
 
   // Animation values
   const logoPosition = useRef(new Animated.Value(0)).current;
@@ -20,11 +24,11 @@ export default function Index() {
     const startAnimations = async () => {
       // Wait 2 seconds before starting
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // Move logo up (but not too much)
       Animated.parallel([
         Animated.timing(logoPosition, {
-          toValue: -40, 
+          toValue: -40,
           duration: 600,
           useNativeDriver: true,
         }),
@@ -49,8 +53,16 @@ export default function Index() {
   return (
     <View className="flex-1 bg-black" onLayout={onLayoutRootView}>
       {/* Top Video Section */}
-      <View className="h-[50%] w-full mt-[-100px]  overflow-hidden">
-       <Video 
+      <View className="h-[50%] w-full mt-[-100px] overflow-hidden">
+        <VideoView
+          player={player}
+          style={{ width: '100%', height: '100%' }}
+          contentFit="contain"
+          nativeControls={false}
+        />
+      </View>
+      {/* <View className="h-[50%] w-full mt-[-100px]  overflow-hidden">
+        <Video
           source={require('../assets/animation/numbers.mp4')}
           rate={1.0}
           volume={1.0}
@@ -60,34 +72,34 @@ export default function Index() {
           isLooping
           useNativeControls={false}
           style={{ width: '100%', height: '100%' }}
-        />  
-      </View> 
+        />
+      </View> */}
 
       {/* Animated Logo - Positioned lower initially */}
-      <Animated.View 
+      <Animated.View
         className="absolute"
         style={{
           top: '50%', // Changed from 50% to 60% to start lower
           left: '50%',
           transform: [
-            { translateX: -100 }, 
+            { translateX: -100 },
             { translateY: -100 },
             { translateY: logoPosition },
           ]
         }}
       >
         <K33PLogo width={200} height={200} />
-      </Animated.View>
+      </Animated.View>i
 
       {/* Animated Buttons */}
-      <Animated.View 
+      <Animated.View
         className="w-full absolute px-6 gap-y-4"
         style={{
           bottom: 60,
           transform: [{ translateY: buttonsPosition }],
           opacity: buttonsOpacity,
         }}
-      >        
+      >
 
         <Button text="Login" onPress={() => router.push('/sign-in')} outline />
         <Button text="Create Account" onPress={() => router.push('/sign-up')} />

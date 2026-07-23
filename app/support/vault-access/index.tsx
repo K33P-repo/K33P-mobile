@@ -1,15 +1,11 @@
 // VaultAccessHelpScreen.tsx
-import Button from '@/components/Button';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Keyboard,
   Linking,
-  Modal,
-  Pressable,
   Text,
   TextInput,
   TouchableOpacity,
@@ -18,6 +14,7 @@ import {
 import SearchIcon from '../../../assets/images/search.png';
 
 import { BackIcon, PHONE } from '@/assets/images/svg';
+import ContactSupportModal from '@/components/ContactSupportModal';
 import helpContent from '@/constants/support.json';
 
 export default function VaultAccessHelpScreen() {
@@ -94,7 +91,7 @@ export default function VaultAccessHelpScreen() {
   }
 
   return (
-    <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+    <View style={{ flex: 1 }}>
       <View className="mb-4 pb-4">
         <TouchableOpacity onPress={() => router.back()} className="absolute left-4 z-10">
           <BackIcon style={{ left: '50%', transform: [{ translateX: '-50%' }] }} />
@@ -147,7 +144,8 @@ export default function VaultAccessHelpScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
             keyboardShouldPersistTaps="always"
-            keyboardDismissMode="interactive"
+            keyboardDismissMode="on-drag"
+            onScrollBeginDrag={Keyboard.dismiss}
             removeClippedSubviews={false}
             maxToRenderPerBatch={5}
             windowSize={5}
@@ -155,29 +153,7 @@ export default function VaultAccessHelpScreen() {
           />
         </View>
       </View>
-
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={closeModal}
-      >
-        <Pressable onPress={closeModal} className="absolute inset-0 bg-black/60" />
-        <View className="flex-1 justify-center items-center">
-          <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
-            <Text className="text-white font-sora text-sm text-center mb-6">
-              {supportPhoneNumber}
-            </Text>
-            {isCalling ? (
-              <View className="py-3 rounded-xl items-center justify-center bg-main">
-                <ActivityIndicator size="small" color="#000000" />
-              </View>
-            ) : (
-              <Button text="Call Support" onPress={handleCallSupport} />
-            )}
-          </View>
-        </View>
-      </Modal>
-    </Pressable>
+      <ContactSupportModal visible={modalVisible} onClose={closeModal} />
+    </View>
   );
 }

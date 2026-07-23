@@ -2,6 +2,7 @@ import { BackIcon, Lock_1 } from '@/assets/images/svg';
 import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
 import { useNokPhoneStore } from '@/store/useNokPhoneScreen';
+import { sendOTP } from '@/utils/api';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Keyboard, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
@@ -12,6 +13,8 @@ export default function NokPhoneEntryScreen() {
   const [isTouched, setIsTouched] = useState(false);
   const [showKeypad, setShowKeypad] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { 
     nokPhoneNumber, 
@@ -36,7 +39,7 @@ export default function NokPhoneEntryScreen() {
   const handlePhoneChange = (text: string) => {
     const cleanedNumber = text.replace(/\D/g, '');
     setNokPhoneNumber(cleanedNumber);
-    setIsValid(cleanedNumber.length === 13);
+    setIsValid(/^234[0-9]{10}$/.test(cleanedNumber));
     setIsTouched(true);
   };
 
@@ -44,29 +47,34 @@ export default function NokPhoneEntryScreen() {
     const newNumber = nokPhoneNumber + num; 
     if (newNumber.length <= 13) {
       setNokPhoneNumber(newNumber); 
-      setIsValid(newNumber.length === 13);
+      setIsValid(/^234[0-9]{10}$/.test(newNumber));
       setIsTouched(true);
     }
   };
 
   useEffect(() => {
-    if (nokPhoneNumber.length == 13) {
-      setIsValid(true);
-    } else {
-      setIsValid(false);
-    }
+    setIsValid(/^234[0-9]{10}$/.test(nokPhoneNumber));
   }, [nokPhoneNumber]);
 
   const handleBackspace = () => {
     const newNumber = nokPhoneNumber.slice(0, -1);
     setNokPhoneNumber(newNumber); 
-    setIsValid(newNumber.length === 13);
+    setIsValid(/^234[0-9]{10}$/.test(newNumber));
     setIsTouched(true);
   };
 
-  const handleProceed = () => {
-    console.log('Entered NOK phone number:', nokFormattedNumber);
-    router.push('/(auth)/sign-up-nok/under18/otp');
+  const handleProceed = async () => {
+    if (!isValid || isLoading) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await sendOTP(nokPhoneNumber);
+      router.push('/(auth)/sign-up-nok/under18/otp');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const showError = isTouched && !isValid && nokPhoneNumber.length > 0;
@@ -124,19 +132,24 @@ export default function NokPhoneEntryScreen() {
           </View>
         </TouchableOpacity>
 
-        {showError && (
+        {showError && !error && (
           <Text className="text-error500 font-sora text-center text-sm p-2">
-            Phone number must be 13 digits (including country code)
+            Phone number must start with 234 and be exactly 13 digits
+          </Text>
+        )}
+
+        {error && (
+          <Text className="text-error500 font-sora text-center text-sm p-2">
+            {error}
           </Text>
         )}
       </View>
 
-      {/* Footer */}
       <View className={`pb-16 ${showKeypad ? 'mb-80' : ''}`}>
         <Button
-          text="Proceed"
+          text={isLoading ? "Sending OTP..." : "Proceed"}
           onPress={handleProceed}
-          isDisabled={!isValid}
+          isDisabled={!isValid || isLoading}
         />
       </View>
 

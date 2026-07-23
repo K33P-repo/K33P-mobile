@@ -5,29 +5,30 @@ import {
   Animated,
   Dimensions,
   FlatList,
-  Image,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
 
-// Import your images
-import SlideImg1 from '../assets/images/carouselImage.png';
-import SlideImg3 from '../assets/images/carouselImage2.png';
-import SlideImg2 from '../assets/images/carouselImage3.png';
-import slideImage2 from '../assets/images/slide1.png';
-import slideImage1 from '../assets/images/slide2.png';
-import slideImage3 from '../assets/images/slide3.png';
+// Import SVG components from the shared svg index
+import {
+  CAROUSEL_1,
+  CAROUSEL_2,
+  CAROUSEL_3,
+  SLIDE_1,
+  SLIDE_2,
+  SLIDE_3,
+} from '../assets/images/svg';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export interface Slide {
   id: number;
-  image: any;
+  image: React.FC<any>; // SVG component, not an Image source
   label: string;
   headline: string;
   description: string;
-  modalImage: any;
+  modalImage: React.FC<any>; // SVG component
 }
 
 export interface CarouselProps {
@@ -38,36 +39,36 @@ export interface CarouselProps {
 const defaultSlides: Slide[] = [
   {
     id: 1,
-    image: SlideImg1,
+    image: CAROUSEL_1,
     label: 'What is K33P?',
     headline: 'Decentralized digital safe for your Key-phrases.',
     description: 'A decentralized digital vault designed to securely store and protect your key-phrases. No central authority, no single point of failure. Your sensitive recovery phrases stay private, encrypted, and accessible only to you. Built for privacy-focused users who value full control over their digital identity and crypto security.',
-    modalImage: slideImage1
+    modalImage: SLIDE_1
   },
   {
     id: 2,
-    image: SlideImg2,
+    image: CAROUSEL_2,
     label: 'Why K33P?',
     headline: 'Lifetime access to key phrases + NOK Setup.',
     description: 'Secure lifetime access to your key phrases with optional Next of Kin (NOK) setup. Ensure your digital assets are protected and accessible when needed  by you or someone you trust. A privacy-first solution built for security, continuity, and peace of mind.',
-    modalImage: slideImage2
+    modalImage: SLIDE_2
   },
   {
     id: 3,
-    image: SlideImg3,
+    image: CAROUSEL_3,
     label: 'How to get started with K33P?',
     headline: 'Deposit 2ADA, Create DID, Take back your 2ADA.',
     description: 'Deposit 2 ADA to create your Decentralized Identifier (DID). Once your DID is successfully created, you can retrieve your 2 ADA  no fees, no strings attached. A secure, trustless way to establish your digital identity on-chain.',
-    modalImage: slideImage3
+    modalImage: SLIDE_3
   },
 ];
 
 const ITEM_WIDTH = screenWidth * 0.91;
 const ITEM_SPACING = screenWidth * 0.02;
 
-const Carousel: React.FC<CarouselProps> = ({ 
-  slides = defaultSlides, 
-  onSlidePress 
+const Carousel: React.FC<CarouselProps> = ({
+  slides = defaultSlides,
+  onSlidePress
 }) => {
   const [current, setCurrent] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -96,50 +97,51 @@ const Carousel: React.FC<CarouselProps> = ({
     }
   }, [onSlidePress]);
 
-  const renderItem = useCallback(({ item, index }: { item: Slide; index: number }) => (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => handleSlidePress(item)}
-      style={{
-        width: ITEM_WIDTH,
-        marginRight: ITEM_SPACING,
-        backgroundColor: '#222222',
-        borderRadius: 12,
-        padding: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        opacity: index === current ? 1 : 0.6,
-        marginLeft: index === 0 ? -ITEM_SPACING : 0
-      }}
-    >
-      <Image
-        source={item.image}
-        style={{ width: 80, height: 80, marginRight: 20 }}
-        resizeMode="contain"
-      />
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            color: '#B0B0B0',
-            fontSize: 12,
-            marginBottom: 4,
-            fontFamily: 'Sora-Regular',
-          }}
-        >
-          {item.label}
-        </Text>
-        <Text
-          style={{
-            color: 'white',
-            fontSize: 14,
-            fontFamily: 'Sora-Bold',
-          }}
-        >
-          {item.headline}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  ), [current, handleSlidePress]);
+  const renderItem = useCallback(({ item, index }: { item: Slide; index: number }) => {
+    const SlideImage = item.image; // SVG component
+    return (
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => handleSlidePress(item)}
+        style={{
+          width: ITEM_WIDTH,
+          marginRight: ITEM_SPACING,
+          backgroundColor: '#222222',
+          borderRadius: 12,
+          padding: 8,
+          flexDirection: 'row',
+          alignItems: 'center',
+          opacity: index === current ? 1 : 0.6,
+          marginLeft: index === 0 ? -ITEM_SPACING : 0
+        }}
+      >
+        <View style={{ width: 80, height: 80, marginRight: 20 }}>
+          <SlideImage width={80} height={80} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              color: '#B0B0B0',
+              fontSize: 12,
+              marginBottom: 4,
+              fontFamily: 'Sora-Regular',
+            }}
+          >
+            {item.label}
+          </Text>
+          <Text
+            style={{
+              color: 'white',
+              fontSize: 14,
+              fontFamily: 'Sora-Bold',
+            }}
+          >
+            {item.headline}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [current, handleSlidePress]);
 
   return (
     <View style={{ marginTop: 5 }}>
@@ -187,8 +189,6 @@ const Carousel: React.FC<CarouselProps> = ({
                 height: 8,
                 borderRadius: 8,
                 backgroundColor: index === current ? '#FFD939' : '#666',
-                // NOTE: 'transition' is not valid in React Native — dot size
-                // switches instantly, which matches the original behaviour.
               }}
             />
           ))}

@@ -33,32 +33,37 @@ export default function Biometrics() {
   const setFingerprintComplete = useSetFingerprintComplete();
   const setVoiceComplete = useSetVoiceComplete();
   const setIrisComplete = useSetIrisComplete();
-  
+
   // Memoize the methods to prevent unnecessary recalculations
   const methods = useMemo(() => [
-    {
-      name: 'Face Scan',
-      image: Method1Image,
-      route: 'sign-up/biometrics/facescan',
-      isCompleted: completedBiometrics.includes('Face I.D'),
-    },
+
     {
       name: 'Fingerprint',
       image: Method2Image,
       route: 'sign-up/biometrics/fingerprint',
       isCompleted: completedBiometrics.includes('Fingerprint'),
+      isAvailable: true,
+    },
+    {
+      name: 'Face Scan',
+      image: Method1Image,
+      route: 'sign-up/biometrics/facescan',
+      isCompleted: completedBiometrics.includes('Face I.D'),
+      isAvailable: false,
     },
     {
       name: 'Voice ID',
       image: Method3Image,
       route: 'sign-up/biometrics/voiceid',
       isCompleted: completedBiometrics.includes('Voice ID'),
+      isAvailable: false,
     },
     {
       name: 'Iris Scan',
       image: Method4Image,
       route: 'sign-up/biometrics/iris',
       isCompleted: completedBiometrics.includes('Iris Scan'),
+      isAvailable: false,
     },
   ], [completedBiometrics]);
 
@@ -99,15 +104,13 @@ export default function Biometrics() {
     }
   }, [showUnavailableMessage]);
 
-  const handleMethodPress = (route: string) => {
-    if (route.includes('voiceid') || route.includes('iris') || route.includes('facescan')) {
-      
+  const handleMethodPress = (route: string, isAvailable: boolean) => {
+    if (!isAvailable) {
       setShowUnavailableMessage(true);
     } else {
       router.push(route);
     }
   };
-
   const toggleAuth = (method: string, isActive: boolean) => {
     if (method === 'OTP' || method === 'PIN') return;
 
@@ -140,12 +143,12 @@ export default function Biometrics() {
     <View className="flex-1 px-5 mt-5">
       {/* Header */}
       <View className="relative flex-row items-center justify-start mb-16">
-      <Lock_3 
-        style={{
-          position: 'absolute',
-          left: '50%',
-          transform: [{ translateX: '-50%' }]
-        }} />
+        <Lock_3
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: [{ translateX: '-50%' }]
+          }} />
       </View>
 
       {/* Content */}
@@ -160,12 +163,16 @@ export default function Biometrics() {
         {/* Image Grid */}
         <View className="flex-row flex-wrap justify-between gap-y-4 mb-8">
           {methods.map((method, index) => {
-            const opacityClass = method.isCompleted ? 'opacity-10' : 'opacity-100';
+            const opacityClass = method.isCompleted
+              ? 'opacity-10'
+              : method.isAvailable
+                ? 'opacity-100'
+                : 'opacity-40';
             return (
               <TouchableOpacity
                 key={index}
                 className={`w-[48%] items-center bg-neutral700 p-4 rounded-xl ${opacityClass}`}
-                onPress={() => handleMethodPress(method.route)}
+                onPress={() => handleMethodPress(method.route, method.isAvailable)}
                 disabled={method.isCompleted}
               >
                 <Image
@@ -213,7 +220,7 @@ export default function Biometrics() {
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
               className="w-full"
             >
-              <TouchableWithoutFeedback onPress={() => {}}>
+              <TouchableWithoutFeedback onPress={() => { }}>
                 <View className="bg-mainBlack rounded-t-3xl">
                   {/* Handle bar */}
                   <TouchableOpacity className="items-center pt-3" onPress={closeModal}>

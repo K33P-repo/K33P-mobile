@@ -63,11 +63,11 @@ export default function AddKey() {
       keyboardHeightRef.current = e.endCoordinates.height;
       setKeyboardVisible(true);
     });
-  
+
     const hideSub = Keyboard.addListener('keyboardDidHide', () => {
       keyboardHeightRef.current = 0;
       setKeyboardVisible(false);
-  
+
       requestAnimationFrame(() => {
         mainScrollViewRef.current?.scrollTo({
           y: scrollPositionRef.current,
@@ -75,7 +75,7 @@ export default function AddKey() {
         });
       });
     });
-  
+
     return () => {
       showSub.remove();
       hideSub.remove();
@@ -118,24 +118,24 @@ export default function AddKey() {
     }
 
     setFocusedInput(index);
-  
+
     requestAnimationFrame(() => {
       const input = inputRefs.current[index];
       const scrollView = mainScrollViewRef.current;
-  
+
       if (!input || !scrollView) return;
-  
+
       input.measureLayout(
         scrollView,
         (_x, y) => {
           const keyboardHeight = keyboardHeightRef.current;
           const screenHeight = screenHeightRef.current;
-  
+
           const visibleHeight = screenHeight - keyboardHeight;
           const bufferBelow = 160;
-  
+
           const targetY = y - (visibleHeight - bufferBelow);
-  
+
           scrollView.scrollTo({
             y: Math.max(0, targetY),
             animated: true
@@ -169,11 +169,10 @@ export default function AddKey() {
               className="w-[45%] mx-2"
             >
               <TextInput
-                className={`h-14 rounded-lg p-4 text-center font-sora ${
-                  focusedInput === index || phrases[index]
-                    ? 'bg-white text-black'
-                    : 'bg-neutral300 text-neutral50'
-                } ${isDoneClicked ? 'bg-gray-200 text-gray-500' : ''}`}
+                className={`h-14 rounded-lg p-4 text-center font-sora ${focusedInput === index || phrases[index]
+                  ? 'bg-white text-black'
+                  : 'bg-neutral300 text-neutral50'
+                  } ${isDoneClicked ? 'bg-gray-200 text-gray-500' : ''}`}
                 placeholder={`Phrase ${index + 1}`}
                 placeholderTextColor="#B0B0B0"
                 value={phrases[index]}
@@ -196,7 +195,7 @@ export default function AddKey() {
 
   const goToPrevPage = () => {
     if (page <= 1 || isDoneClicked) return; // ← disable navigation after Done
-    
+
     Keyboard.dismiss();
     setPage((prev) => {
       const newPage = (prev - 1) as 1 | 2;
@@ -210,7 +209,7 @@ export default function AddKey() {
 
   const goToNextPage = () => {
     if (page >= totalPages || isDoneClicked) return; // ← disable navigation after Done
-    
+
     Keyboard.dismiss();
     setPage((prev) => {
       const newPage = (prev + 1) as 1 | 2;
@@ -240,7 +239,7 @@ export default function AddKey() {
 
     try {
       setIsLoading(true);
-      
+
       if (!phoneNumber) {
         Alert.alert('Error', 'Phone number is missing. Please sign in again.');
         router.replace('/sign-in');
@@ -300,7 +299,7 @@ export default function AddKey() {
 
       if (updateResponse.success) {
         console.log('Wallet successfully updated with recovery data');
-        
+
         router.push({
           pathname: '/(home)/add-to-wallet',
           params: {
@@ -320,7 +319,7 @@ export default function AddKey() {
     } catch (err: any) {
       console.error('Error saving key phrases:', err);
       Alert.alert(
-        'Error', 
+        'Error',
         err.message || 'Failed to save wallet. Please try again.'
       );
       // If error, allow retry (unlock form)
@@ -337,8 +336,8 @@ export default function AddKey() {
           ref={mainScrollViewRef}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ 
-            flexGrow: 1, 
+          contentContainerStyle={{
+            flexGrow: 1,
             paddingBottom: keyboardVisible ? 400 : 5
           }}
           onScroll={handleScroll}
@@ -370,9 +369,8 @@ export default function AddKey() {
                 disabled={isDoneClicked} // ← disable touch
               >
                 <Text
-                  className={`text-center font-sora ${
-                    selectedKeyType === '12' ? 'text-black font-sora-semibold' : 'text-neutral200'
-                  } ${isDoneClicked ? 'text-gray-500' : ''}`}
+                  className={`text-center font-sora ${selectedKeyType === '12' ? 'text-black font-sora-semibold' : 'text-neutral200'
+                    } ${isDoneClicked ? 'text-gray-500' : ''}`}
                 >
                   12 Keys
                 </Text>
@@ -391,9 +389,8 @@ export default function AddKey() {
                 disabled={isDoneClicked} // ← disable touch
               >
                 <Text
-                  className={`text-center font-sora ${
-                    selectedKeyType === '24' ? 'text-black font-sora-semibold' : 'text-neutral200'
-                  } `}
+                  className={`text-center font-sora ${selectedKeyType === '24' ? 'text-black font-sora-semibold' : 'text-neutral200'
+                    } `}
                 >
                   24 Keys
                 </Text>
@@ -403,18 +400,18 @@ export default function AddKey() {
             <View className="my-5 bg-white/10 rounded-xl pt-4">
               {renderPhraseInputs(start, end)}
             </View>
-            
+
             {selectedKeyType === '24' && (
               <View className="flex-row items-center justify-between mt-2 px-4 mb-4">
-                <TouchableOpacity 
-                  onPress={goToPrevPage} 
+                <TouchableOpacity
+                  onPress={goToPrevPage}
                   disabled={isFirstPage || isDoneClicked}
                   activeOpacity={0.7}
                   hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
                 >
-                  <Image 
-                    source={ArrowLeft} 
-                    style={{ opacity: isFirstPage || isDoneClicked ? 0.5 : 1 }} 
+                  <Image
+                    source={ArrowLeft}
+                    style={{ opacity: isFirstPage || isDoneClicked ? 0.5 : 1 }}
                   />
                 </TouchableOpacity>
 
@@ -422,32 +419,32 @@ export default function AddKey() {
                   {[...Array(totalPages)].map((_, index) => (
                     <View
                       key={index}
-                      className={`rounded-full ${
-                        page === index + 1 ? 'bg-white w-4 h-2' : 'bg-neutral100 w-2 h-2'
-                      }`}
+                      className={`rounded-full ${page === index + 1 ? 'bg-white w-4 h-2' : 'bg-neutral100 w-2 h-2'
+                        }`}
                     />
                   ))}
                 </View>
 
-                <TouchableOpacity 
-                  onPress={goToNextPage} 
+                <TouchableOpacity
+                  onPress={goToNextPage}
                   disabled={isLastPage || isDoneClicked}
                   activeOpacity={0.7}
                   hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
                 >
-                  <Image 
-                    source={ArrowRight} 
-                    style={{ opacity: isLastPage || isDoneClicked ? 0.5 : 1 }} 
+                  <Image
+                    source={ArrowRight}
+                    style={{ opacity: isLastPage || isDoneClicked ? 0.5 : 1 }}
                   />
                 </TouchableOpacity>
               </View>
             )}
-            
+
             <View className="pb-20 pt-4">
               <Button
                 text="Done"
                 onPress={handleSaveKeyPhrases}
                 isLoading={isLoading}
+                isDisabled={!allPhrasesFilled}
               />
             </View>
           </View>

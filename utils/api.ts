@@ -1,8 +1,8 @@
 // utils/api.ts
 import { useAuthStore } from '@/store/useAuthMethod';
 import { encryptPhoneData } from './phoneEncyption';
-import { fullFolderCleanup, getWalletFolders } from './wallet-api';
 import { hashPin } from './pinEncryption';
+import { fullFolderCleanup, getWalletFolders } from './wallet-api';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://k33p-backend-i9kj.onrender.com/api';
 
@@ -44,7 +44,7 @@ async function makeRequest(method: string, endpoint: string, data?: any, require
   // Add auth token if required
   if (requiresAuth) {
     const { token, clearAuthData } = useAuthStore.getState();
-    
+
     if (!token) {
       throw new Error('Authentication required: No token found');
     }
@@ -71,7 +71,7 @@ async function makeRequest(method: string, endpoint: string, data?: any, require
   try {
     const response = await fetch(url, config);
     const responseData = await response.json();
-    
+
     // Check for 401 Unauthorized response
     if (response.status === 401) {
       const { clearAuthData } = useAuthStore.getState();
@@ -94,16 +94,16 @@ async function makeRequest(method: string, endpoint: string, data?: any, require
 }
 
 export async function makeAuthenticatedRequest(
-  method: string, 
-  endpoint: string, 
+  method: string,
+  endpoint: string,
   data?: any
 ) {
   return await makeRequest(method, endpoint, data, true);
 }
 
 export async function makePublicRequest(
-  method: string, 
-  endpoint: string, 
+  method: string,
+  endpoint: string,
   data?: any
 ) {
   return await makeRequest(method, endpoint, data, false);
@@ -112,7 +112,7 @@ export async function makePublicRequest(
 // Check token validity
 export async function validateToken(): Promise<{ isValid: boolean; message?: string }> {
   const { token } = useAuthStore.getState();
-  
+
   if (!token) {
     return { isValid: false, message: 'No token found' };
   }
@@ -139,7 +139,7 @@ export async function generateZKCommitment(phone: string, biometric: string, pas
   };
 
   const response = await makePublicRequest('POST', '/zk/commitment', payload);
-  
+
   if (response.body?.data?.commitment) {
     return response.body.data.commitment;
   } else {
@@ -156,7 +156,7 @@ export async function generateZKProof(phone: string, biometric: string, passkey:
   };
 
   const response = await makePublicRequest('POST', '/zk/proof', payload);
-  
+
   if (response.body?.data?.proof) {
     return response.body.data.proof;
   } else {
@@ -167,23 +167,23 @@ export async function generateZKProof(phone: string, biometric: string, passkey:
 // Refund APIs
 export async function initiateRefund(userAddress: string) {
   const payload = { userAddress };
-  
+
   const response = await makePublicRequest('POST', '/refund', payload);
-  
+
   if (response.body?.success) {
     return response.body.data;
   } else {
     throw new Error(response.body?.message || 'Failed to initiate refund');
-  } 
+  }
 
-    
+
 }
 
 export async function completeRefund(userAddress: string, walletAddress: string) {
   const payload = { userAddress, walletAddress };
-  
+
   const response = await makePublicRequest('POST', '/refund', payload);
-  
+
   if (response.body?.success) {
     return response.body.data;
   } else {
@@ -203,15 +203,15 @@ export async function signupUser(signupData: {
   verificationMethod: string;
 }) {
   console.log('Signup data:', signupData);
-  
+
   const response = await makePublicRequest('POST', '/auth/signup', signupData);
-  
+
   if (response.status === 200 && response.body) {
     return response.body;
   } else {
-    const errorMessage = response.body?.error?.message || 
-                        response.body?.message || 
-                        'Account creation failed';
+    const errorMessage = response.body?.error?.message ||
+      response.body?.message ||
+      'Account creation failed';
     throw new Error(errorMessage);
   }
 }
@@ -220,7 +220,7 @@ export async function signupUser(signupData: {
 export async function checkUsernameAvailability(username: string): Promise<boolean> {
   try {
     const response = await makeAuthenticatedRequest('GET', `/auth/username/check/${username}`);
-    
+
     if (response.body?.success) {
       console.log('Username availability check:', {
         username: response.body.data.username,
@@ -343,7 +343,7 @@ export async function deleteUser(): Promise<{
 
 export async function setupUsername(username: string): Promise<boolean> {
   const { token, setToken, setUsername } = useAuthStore.getState();
-  
+
   if (!token) {
     console.log('No auth token available for username setup');
     return false;
@@ -352,19 +352,19 @@ export async function setupUsername(username: string): Promise<boolean> {
   try {
     const usernameData = { username };
     const response = await makeAuthenticatedRequest('POST', '/auth/setup-username', usernameData);
-    
+
     if (response.body?.success) {
       console.log('Username setup successful:', response.body.data.username);
-      
+
       // Update token if provided in response
       if (response.body.data.token) {
         setToken(response.body.data.token);
         console.log('Token updated with username information');
       }
-      
+
       // Save username to store
       setUsername(username);
-      
+
       return true;
     } else {
       console.log('Username setup failed:', response.body?.error?.message);
@@ -385,7 +385,7 @@ export async function getUsername(): Promise<{
   hasUsername: boolean;
 } | null> {
   const { token } = useAuthStore.getState();
-  
+
   if (!token) {
     console.log('No auth token available for getting username');
     return null;
@@ -393,14 +393,14 @@ export async function getUsername(): Promise<{
 
   try {
     const response = await makeAuthenticatedRequest('GET', '/auth/username');
-    
+
     if (response.body?.success) {
       console.log('Username retrieved successfully:', {
         userId: response.body.data.userId,
         username: response.body.data.username,
         hasUsername: response.body.data.hasUsername
       });
-      
+
       return response.body.data;
     } else {
       console.log('Get username failed:', response.body?.error?.message);
@@ -420,7 +420,7 @@ export async function updateUsername(username: string): Promise<{
   updatedAt: string;
 } | null> {
   const { token, setUsername } = useAuthStore.getState();
-  
+
   if (!token) {
     console.log('No auth token available for updating username');
     return null;
@@ -438,18 +438,18 @@ export async function updateUsername(username: string): Promise<{
 
     const usernameData = { username };
     const response = await makeAuthenticatedRequest('PUT', '/auth/username', usernameData);
-    
+
     if (response.body?.success) {
       console.log('Username updated successfully:', response.body.data.username);
-      
+
       // Update username in store
       setUsername(username);
-      
+
       return response.body.data;
     } else {
-      const errorMessage = response.body?.error?.message || 
-                          response.body?.message || 
-                          'Failed to update username';
+      const errorMessage = response.body?.error?.message ||
+        response.body?.message ||
+        'Failed to update username';
       throw new Error(errorMessage);
     }
   } catch (error: any) {
@@ -462,13 +462,13 @@ export async function updateUsername(username: string): Promise<{
 export async function createAuthMethods(phoneNumber: string, pin: string, userId: string) {
   const encryptedPhone = await encryptPhoneData(phoneNumber);
   console.log(encryptedPhone);
-  
+
   console.log('Phone encrypted successfully');
-  
+
   // Hash PIN using PBKDF2 (one-way hash for storage)
   const hashedPin = await hashPin(pin, userId);
   console.log('PIN hashed successfully');
-  
+
   return [
     {
       type: 'pin',
@@ -477,7 +477,7 @@ export async function createAuthMethods(phoneNumber: string, pin: string, userId
       lastUsed: new Date().toISOString()
     },
     {
-      type: 'fingerprint', 
+      type: 'fingerprint',
       createdAt: new Date().toISOString(),
       lastUsed: new Date().toISOString()
     },
@@ -519,15 +519,15 @@ export async function updatePin(pinHash: string): Promise<{
     }
 
     console.log('🔄 Updating PIN...');
-    
+
     const response = await makeAuthenticatedRequest('PUT', '/auth/update-pin', { pinHash });
-    
+
     if (response.body?.success) {
       console.log('✅ PIN updated successfully:', {
         userId: response.body.data?.userId,
         updatedAt: response.body.data?.updatedAt
       });
-      
+
       return {
         success: true,
         data: response.body.data,
@@ -535,7 +535,7 @@ export async function updatePin(pinHash: string): Promise<{
       };
     } else {
       console.log('❌ PIN update failed:', response.body?.error?.message);
-      
+
       return {
         success: false,
         error: response.body?.error?.message || response.body?.message || 'Failed to update PIN',
@@ -544,7 +544,7 @@ export async function updatePin(pinHash: string): Promise<{
     }
   } catch (error: any) {
     console.log('💥 PIN update request failed:', error.message);
-    
+
     // Handle specific error cases
     if (error.message.includes('Authentication required')) {
       return {
@@ -553,7 +553,7 @@ export async function updatePin(pinHash: string): Promise<{
         message: 'Your session has expired. Please login again.'
       };
     }
-    
+
     if (error.message.includes('Token expired')) {
       return {
         success: false,
@@ -561,11 +561,30 @@ export async function updatePin(pinHash: string): Promise<{
         message: 'Your session has expired. Please login again.'
       };
     }
-    
+
     return {
       success: false,
       error: error.message || 'Failed to update PIN',
       message: 'Failed to update PIN. Please try again.'
     };
+  }
+}
+
+export async function sendOTP(phone: string): Promise<{ success: boolean; message: string; expiresIn?: string }> {
+  const response = await makePublicRequest('POST', '/otp/send', { phone });
+  if (response.body?.success) {
+    return response.body;
+  } else {
+    throw new Error(response.body?.error?.message || response.body?.message || 'Failed to send OTP');
+  }
+}
+
+export async function verifyOTP(phone: string, otp: string): Promise<{ success: boolean; message: string }> {
+  const response = await makePublicRequest('POST', '/otp/verify', { phone, otp });
+  if (response.body?.success) {
+    console.log('✅ OTP verified successfully:', response.body.message);
+    return response.body;
+  } else {
+    throw new Error(response.body?.error?.message || response.body?.message || 'Failed to verify OTP');
   }
 }

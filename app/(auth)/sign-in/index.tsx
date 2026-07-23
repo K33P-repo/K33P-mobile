@@ -3,27 +3,49 @@ import Button from '@/components/Button';
 import NumericKeypad from '@/components/Keypad';
 import { AuthMethod, useAuthStore } from '@/store/useAuthMethod';
 import { usePhoneStore } from '@/store/usePhoneStore';
+import { usePhoneVerificationStore } from '@/store/usePhoneVerificationStore';
+import { sendOTP } from '@/utils/api';
 import { encryptPhoneData } from '@/utils/phoneEncyption';
 import { useRouter } from 'expo-router';
+import { AsYouType, isValidPhoneNumber } from 'libphonenumber-js';
 import React, { useEffect, useState } from 'react';
 import { Keyboard, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+
+const MAX_PHONE_DIGITS = 15; // max length of any E.164 number (excluding the leading +)
+
+const isValidInternationalNumber = (digits: string): boolean => {
+  if (!digits) return false;
+  try {
+    return isValidPhoneNumber(`+${digits}`);
+  } catch {
+    return false;
+  }
+};
+
+const formatInternationalNumber = (digits: string): string => {
+  if (!digits) return '';
+  const formatter = new AsYouType();
+  return formatter.input(`+${digits}`);
+};
 
 export default function PhoneEntryScreen() {
   const router = useRouter();
   const {
-    phoneNumber, 
-    formattedNumber, 
-    setPhoneNumber, 
-    setFormattedNumber, 
+    phoneNumber,
+    formattedNumber,
+    setPhoneNumber,
+    setFormattedNumber,
   } = usePhoneStore();
 
-  const { 
-    setUserAuthMethods, 
-    setUserId, 
-    setWalletAddress, 
+  const {
+    setUserAuthMethods,
+    setUserId,
+    setWalletAddress,
     setUsername,
-    setToken 
+    setToken
   } = useAuthStore();
+
+  const { isPhoneVerified } = usePhoneVerificationStore();
 
   const [isValid, setIsValid] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
@@ -33,35 +55,26 @@ export default function PhoneEntryScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (phoneNumber.length > 0) {
-      let formatted = '+';
-      if (phoneNumber.length > 0) formatted += phoneNumber.substring(0, 3);
-      if (phoneNumber.length > 3) formatted += '-' + phoneNumber.substring(3, 6);
-      if (phoneNumber.length > 6) formatted += '-' + phoneNumber.substring(6, 10);
-      if (phoneNumber.length > 10) formatted += '-' + phoneNumber.substring(10, 13);
-      setFormattedNumber(formatted);
-    } else {
-      setFormattedNumber('');
-    }
+    setFormattedNumber(formatInternationalNumber(phoneNumber));
   }, [phoneNumber, setFormattedNumber]);
 
   useEffect(() => {
-    setIsValid(phoneNumber.length === 13);
+    setIsValid(isValidInternationalNumber(phoneNumber));
   }, [phoneNumber]);
 
   const handlePhoneChange = (text: string) => {
     const cleanedNumber = text.replace(/\D/g, '');
     setPhoneNumber(cleanedNumber);
-    setIsValid(cleanedNumber.length === 13);
+    setIsValid(isValidInternationalNumber(cleanedNumber));
     setIsTouched(true);
     setError(null);
   };
 
   const handleKeyPress = (num: string) => {
     const newNumber = phoneNumber + num;
-    if (newNumber.length <= 13) {
+    if (newNumber.length <= MAX_PHONE_DIGITS) {
       setPhoneNumber(newNumber);
-      setIsValid(newNumber.length === 13);
+      setIsValid(isValidInternationalNumber(newNumber));
       setIsTouched(true);
       setError(null);
     }
@@ -70,7 +83,7 @@ export default function PhoneEntryScreen() {
   const handleBackspace = () => {
     const newNumber = phoneNumber.slice(0, -1);
     setPhoneNumber(newNumber);
-    setIsValid(newNumber.length === 13);
+    setIsValid(isValidInternationalNumber(newNumber));
     setIsTouched(true);
     setError(null);
   };
@@ -94,12 +107,21 @@ export default function PhoneEntryScreen() {
         body: JSON.stringify({ phoneHash }),
       });
 
-      const data = await response.json();
-      console.log('Find user response:', data);
-      
+      const rawText = await response.text();
+      console.log('Status:', response.status);
+      console.log('Raw response:', rawText.substring(0, 300)); // see what's actually coming back
+
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        setError(`Server error (${response.status}). Please try again.`);
+        return false;
+      }
+
       if (data.success && data.data) {
         const userData = data.data;
-        
+
         if (userData.authMethods && Array.isArray(userData.authMethods)) {
           setUserAuthMethods(userData.authMethods);
           console.log('✅ Stored auth methods:', userData.authMethods.map((m: AuthMethod) => m.type));
@@ -121,7 +143,7 @@ export default function PhoneEntryScreen() {
       } else {
         setError(data.error?.message || 'User not found');
         return false;
-      } 
+      }
     } catch (error) {
       console.error('Error finding user:', error);
       setError('Network error. Please try again.');
@@ -133,15 +155,26 @@ export default function PhoneEntryScreen() {
 
   const handleProceed = () => {
     if (!isValid || isLoading) return;
-  
+
     setIsLoading(true);
     setShowKeypad(false);
-  
+
     setTimeout(async () => {
-      console.log('🔐 Finding user with phone:', formattedNumber);
       const userFound = await findUser();
-      if (userFound) {
+      if (!userFound) return;
+
+      if (isPhoneVerified(phoneNumber)) {
+        console.log('✅ Phone already verified, skipping OTP');
+        router.push('/sign-in/pinsetup');
+        return;
+      }
+
+      try {
+        await sendOTP(phoneNumber);
         router.push('/sign-in/otp');
+      } catch (err: any) {
+        setError(err.message || 'Failed to send OTP. Please try again.');
+        setIsLoading(false);
       }
     }, 100);
   };
@@ -154,7 +187,7 @@ export default function PhoneEntryScreen() {
         <TouchableOpacity className="z-10" onPress={() => router.back()} disabled={isLoading}>
           <BackIcon width={40} height={40} />
         </TouchableOpacity>
-        <SIGN_IN_0 
+        <SIGN_IN_0
           style={{
             position: 'absolute',
             left: '50%',
@@ -179,17 +212,16 @@ export default function PhoneEntryScreen() {
         >
           <View pointerEvents="none">
             <TextInput
-              className={`rounded-lg px-5 py-3 mb-2 font-sora text-sm border ${
-                error || showError
-                  ? 'text-error500 border-error500'
-                  : 'text-white border-neutral200'
-              } ${isFocused ? 'border-white' : ''}`}
-              placeholder="+234-801-2345-678"
+              className={`rounded-lg px-5 py-3 mb-2 font-sora text-sm border ${error || showError
+                ? 'text-error500 border-error500'
+                : 'text-white border-neutral200'
+                } ${isFocused ? 'border-white' : ''}`}
+              placeholder="+234 801 234 5678"
               placeholderTextColor="#969696"
               keyboardType="phone-pad"
               value={formattedNumber}
               onChangeText={handlePhoneChange}
-              maxLength={18}
+              maxLength={20}
               showSoftInputOnFocus={false}
               editable={!isLoading}
               onFocus={() => {
@@ -202,13 +234,13 @@ export default function PhoneEntryScreen() {
 
         {showError && (
           <Text className="text-error500 font-sora text-center text-sm p-2">
-            Phone number must be 13 digits (including country code)
+            Please enter a valid phone number, including your country code
           </Text>
         )}
 
         {error && (
           <Text className="text-error500 font-sora text-center text-sm p-2">
-            {error}
+            User not found
           </Text>
         )}
       </View>

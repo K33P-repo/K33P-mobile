@@ -1,5 +1,5 @@
-import { Video } from 'expo-av';
-import React from 'react';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import React, { useEffect } from 'react';
 import { Text, TouchableOpacity, Vibration } from 'react-native';
 
 type ButtonProps = {
@@ -19,6 +19,10 @@ export default function Button({
   danger = false,
   isLoading = false,
 }: ButtonProps) {
+  const loaderPlayer = useVideoPlayer(require('../assets/animation/loader.mp4'), (p) => {
+    p.loop = true;
+    p.muted = true;
+  });
   // Base classes
   let buttonClasses = 'py-3 rounded-xl w-full items-center justify-center h-12';
   let textClasses = 'font-sora-semibold text-sm text-center';
@@ -42,6 +46,10 @@ export default function Button({
     Vibration.vibrate(50);
     onPress();
   };
+  useEffect(() => {
+    if (isLoading) loaderPlayer.play();
+    else loaderPlayer.pause();
+  }, [isLoading]);
 
   return (
     <TouchableOpacity
@@ -54,16 +62,8 @@ export default function Button({
         outline ? (
           <Text className={textClasses}>Please wait...</Text>
         ) : (
-          <Video
-            source={require('../assets/animation/loader.mp4')}
-            rate={1.0}
-            volume={1.0}
-            isMuted={true}
-            resizeMode="contain"
-            shouldPlay={isLoading}
-            isLooping
-            style={{ width: 30, height: 24 }}
-          />
+          <VideoView player={loaderPlayer} style={{ width: 30, height: 24 }} contentFit="contain" nativeControls={false} />
+
         )
       ) : (
         <Text className={textClasses}>{text}</Text>

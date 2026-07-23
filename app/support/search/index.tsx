@@ -1,24 +1,21 @@
 import { BackIcon, PHONE } from '@/assets/images/svg';
-import Button from '@/components/Button';
+import ContactSupportModal from '@/components/ContactSupportModal';
 import helpContent from '@/constants/support.json';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
   Keyboard,
   Linking,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import SearchIcon from '../../../assets/images/search.png';
 
@@ -102,6 +99,7 @@ const SearchResultCard = memo(
         bounces={Platform.OS === 'ios'}
         overScrollMode="never"
         keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={Keyboard.dismiss}
       >
         {item.highlightedContent}
       </ScrollView>
@@ -180,33 +178,30 @@ export default function SupportSearchScreen() {
       }
     });
 
-    // Sort results based on the source screen
     return results.sort((a, b) => {
       const fromLower = from.toLowerCase();
-      
-      // If from support center, prioritize Account first
+
       if (fromLower === 'support') {
         if (a.section === 'Account') return -1;
         if (b.section === 'Account') return 1;
         return 0;
       }
-      
-      // For specific screens, prioritize that section
+
       if (fromLower.includes('account') && a.section === 'Account') return -1;
       if (fromLower.includes('account') && b.section === 'Account') return 1;
-      
+
       if (fromLower.includes('authentication') && a.section === 'Authentication') return -1;
       if (fromLower.includes('authentication') && b.section === 'Authentication') return 1;
-      
+
       if (fromLower.includes('payment') && a.section === 'Payment') return -1;
       if (fromLower.includes('payment') && b.section === 'Payment') return 1;
-      
+
       if ((fromLower.includes('lite') || fromLower.includes('lightpaper')) && a.section === 'Lightpaper') return -1;
       if ((fromLower.includes('lite') || fromLower.includes('lightpaper')) && b.section === 'Lightpaper') return 1;
-      
+
       if ((fromLower.includes('vault') || fromLower.includes('recovery')) && a.section === 'Vault Access') return -1;
       if ((fromLower.includes('vault') || fromLower.includes('recovery')) && b.section === 'Vault Access') return 1;
-      
+
       return 0;
     });
   }, [searchQuery, from]);
@@ -238,7 +233,7 @@ export default function SupportSearchScreen() {
     ({ item, index }: { item: SearchResult; index: number }) => (
       <SearchResultCard
         item={item}
-        index={index} 
+        index={index}
         isActive={index === searchCurrent}
         onPress={navigateToResult}
       />
@@ -279,150 +274,125 @@ export default function SupportSearchScreen() {
   };
 
   return (
-    <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
-      <View className="flex-1">
-        
-        {/* Header */}
-        <View className="mb-4 pb-4">
-          <TouchableOpacity onPress={() => router.back()} className="absolute left-4 z-10">
-            <BackIcon style={{ left: '50%', transform: [{ translateX: '-50%' }] }} />
-          </TouchableOpacity>
+    <View style={{ flex: 1 }}>
+      {/* Header */}
+      <View className="mb-4 pb-4">
+        <TouchableOpacity onPress={() => router.back()} className="absolute left-4 z-10">
+          <BackIcon style={{ left: '50%', transform: [{ translateX: '-50%' }] }} />
+        </TouchableOpacity>
 
-          <View className="items-center justify-center">
-            <Text className="text-sm text-white font-sora-bold mt-3">
-              {getHeaderTitle()}
-            </Text>
-          </View>
-
-          <TouchableOpacity onPress={openModal} className="absolute right-4 p-2">
-            <PHONE style={{ left: '50%', transform: [{ translateX: '-50%' }] }} />
-          </TouchableOpacity>
+        <View className="items-center justify-center">
+          <Text className="text-sm text-white font-sora-bold mt-3">
+            {getHeaderTitle()}
+          </Text>
         </View>
 
-        {/* Search Input */}
-        <View className="px-4 mb-4">
-          <View className="flex-row items-center bg-searchBg rounded-xl px-3 py-1">
-            <Image source={SearchIcon} className="w-5 h-5 mr-2" resizeMode="contain" />
-            <TextInput
-              ref={inputRef}
-              className="flex-1 text-white font-sora text-sm"
-              placeholder="Search..."
-              placeholderTextColor="#B0B0B0"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus={false}
-              returnKeyType="search"
-            />
-          </View>
-        </View>
-
-        {/* Results area */}
-        {searchQuery.trim() ? (
-          searchResults.length > 0 ? (
-            <View className="flex-1">
-              <FlatList
-                ref={flatListRef}
-                data={searchResults}
-                horizontal
-                scrollEnabled={false}
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => `result-${item.id}`}
-                renderItem={renderCard}
-                getItemLayout={(_, index) => ({
-                  length: ITEM_WIDTH + ITEM_SPACING,
-                  offset: (ITEM_WIDTH + ITEM_SPACING) * index,
-                  index,
-                })}
-                contentContainerStyle={{
-                  paddingLeft: 20,
-                  paddingRight: ITEM_SPACING,
-                }}
-                initialNumToRender={1}
-                maxToRenderPerBatch={2}
-                windowSize={3}
-              />
-
-              <View className="flex-row items-center justify-between px-5 mt-2 mb-8">
-                <TouchableOpacity
-                  onPress={goToPrev}
-                  activeOpacity={0.7}
-                  disabled={searchCurrent === 0}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Ionicons
-                    name="chevron-back-outline"
-                    size={20}
-                    color={searchCurrent === 0 ? '#555' : '#fff'}
-                  />
-                </TouchableOpacity>
-
-                <View className="flex-row gap-3 items-center bg-neutral700 rounded-full px-4 py-2">
-                  {searchResults.map((_, index) => (
-                    <View
-                      key={index}
-                      style={{
-                        width: index === searchCurrent ? 16 : 8,
-                        height: 8,
-                        borderRadius: 8,
-                        backgroundColor: index === searchCurrent ? '#ffffff' : '#B0B0B0',
-                      }}
-                    />
-                  ))}
-                </View>
-
-                <TouchableOpacity
-                  onPress={goToNext}
-                  activeOpacity={0.7}
-                  disabled={searchCurrent === searchResults.length - 1}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Ionicons
-                    name="chevron-forward-outline"
-                    size={20}
-                    color={searchCurrent === searchResults.length - 1 ? '#555' : '#fff'}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View className="flex-1 justify-center items-center px-8">
-              <Text className="text-neutral200 font-sora text-sm text-center">
-                No results found for "{searchQuery}"
-              </Text>
-            </View>
-          )
-        ) : (
-          <View className="flex-1 justify-center items-center px-8">
-            <Text className="text-neutral300 font-sora text-base text-center">
-              Start typing to search
-            </Text>
-          </View>
-        )}
+        <TouchableOpacity onPress={openModal} className="absolute right-4 p-2">
+          <PHONE style={{ left: '50%', transform: [{ translateX: '-50%' }] }} />
+        </TouchableOpacity>
       </View>
 
-      {/* Phone modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={closeModal}
-      >
-        <Pressable onPress={closeModal} className="absolute inset-0 bg-black/60" />
-        <View className="flex-1 justify-center items-center">
-          <View className="bg-mainBlack rounded-3xl p-6 w-4/5">
-            <Text className="text-white font-sora text-sm text-center mb-6">
-              {supportPhoneNumber}
-            </Text>
-            {isCalling ? (
-              <View className="py-3 rounded-xl items-center justify-center bg-main">
-                <ActivityIndicator size="small" color="#000000" />
-              </View>
-            ) : (
-              <Button text="Call Support" onPress={handleCallSupport} />
-            )}
-          </View>
+      {/* Search Input */}
+      <View className="px-4 mb-4">
+        <View className="flex-row items-center bg-searchBg rounded-xl px-3 py-1">
+          <Image source={SearchIcon} className="w-5 h-5 mr-2" resizeMode="contain" />
+          <TextInput
+            ref={inputRef}
+            className="flex-1 text-white font-sora text-sm"
+            placeholder="Search..."
+            placeholderTextColor="#B0B0B0"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus={false}
+            returnKeyType="search"
+          />
         </View>
-      </Modal>
-    </Pressable>
+      </View>
+
+      {/* Results area */}
+      {searchQuery.trim() ? (
+        searchResults.length > 0 ? (
+          <View className="flex-1">
+            <FlatList
+              ref={flatListRef}
+              data={searchResults}
+              horizontal
+              scrollEnabled={false}
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => `result-${item.id}`}
+              renderItem={renderCard}
+              getItemLayout={(_, index) => ({
+                length: ITEM_WIDTH + ITEM_SPACING,
+                offset: (ITEM_WIDTH + ITEM_SPACING) * index,
+                index,
+              })}
+              contentContainerStyle={{
+                paddingLeft: 20,
+                paddingRight: ITEM_SPACING,
+              }}
+              initialNumToRender={1}
+              maxToRenderPerBatch={2}
+              windowSize={3}
+            />
+
+            <View className="flex-row items-center justify-between px-5 mt-2 mb-8">
+              <TouchableOpacity
+                onPress={goToPrev}
+                activeOpacity={0.7}
+                disabled={searchCurrent === 0}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons
+                  name="chevron-back-outline"
+                  size={20}
+                  color={searchCurrent === 0 ? '#555' : '#fff'}
+                />
+              </TouchableOpacity>
+
+              <View className="flex-row gap-3 items-center bg-neutral700 rounded-full px-4 py-2">
+                {searchResults.map((_, index) => (
+                  <View
+                    key={index}
+                    style={{
+                      width: index === searchCurrent ? 16 : 8,
+                      height: 8,
+                      borderRadius: 8,
+                      backgroundColor: index === searchCurrent ? '#ffffff' : '#B0B0B0',
+                    }}
+                  />
+                ))}
+              </View>
+
+              <TouchableOpacity
+                onPress={goToNext}
+                activeOpacity={0.7}
+                disabled={searchCurrent === searchResults.length - 1}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons
+                  name="chevron-forward-outline"
+                  size={20}
+                  color={searchCurrent === searchResults.length - 1 ? '#555' : '#fff'}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View className="flex-1 justify-center items-center px-8">
+            <Text className="text-neutral200 font-sora text-sm text-center">
+              No results found for "{searchQuery}"
+            </Text>
+          </View>
+        )
+      ) : (
+        <View className="flex-1 justify-center items-center px-8">
+          <Text className="text-neutral300 font-sora text-base text-center">
+            Start typing to search
+          </Text>
+        </View>
+      )}
+
+      <ContactSupportModal visible={modalVisible} onClose={closeModal} />
+    </View>
   );
 }
