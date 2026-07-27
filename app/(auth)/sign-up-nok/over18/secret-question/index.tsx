@@ -1,9 +1,12 @@
 import { BackIcon, OVER18_3, OVER18_4 } from '@/assets/images/svg';
 import Button from '@/components/Button';
+import { useNokPhoneStore } from '@/store/useNokPhoneScreen';
+import { registerNok } from '@/utils/nok';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -27,6 +30,8 @@ export default function SecretQuestion() {
   // Local state for inputs (no store)
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { nokPhoneNumber } = useNokPhoneStore();
 
   // Check validity when inputs change
   useEffect(() => {
@@ -61,11 +66,23 @@ export default function SecretQuestion() {
     setIsTouched(true);
   };
 
-  const handleProceed = () => {
-    console.log('Secret Question:', question);
-    console.log('Secret Answer:', answer);
-    // Show success modal instead of navigating directly
-    setShowSuccessModal(true);
+  const handleProceed = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      // Register the next-of-kin on the Midnight NOK contract (via backend).
+      // owner_identifier is derived from the authenticated user on the backend;
+      // nok_hash is derived from the NOK's phone number.
+      await registerNok(nokPhoneNumber);
+      setShowSuccessModal(true);
+    } catch (error) {
+      Alert.alert(
+        'Registration failed',
+        error instanceof Error ? error.message : 'Could not register your Next-of-Kin. Please try again.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleModalProceed = () => {
@@ -168,9 +185,9 @@ export default function SecretQuestion() {
           {/* Footer */}
           <View className={`${isKeyboardVisible ? 'mb-4' : 'pb-16'}`}>
             <Button
-              text="Proceed"
+              text={isSubmitting ? 'Registering...' : 'Proceed'}
               onPress={handleProceed}
-              isDisabled={!isValid}
+              isDisabled={!isValid || isSubmitting}
             />
           </View>
         </KeyboardAvoidingView>

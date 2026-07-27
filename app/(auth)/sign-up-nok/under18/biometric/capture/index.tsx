@@ -1,3 +1,5 @@
+import { useNokPhoneStore } from '@/store/useNokPhoneScreen';
+import { registerNok } from '@/utils/nok';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -18,6 +20,7 @@ export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<any>(null);
   const router = useRouter();
+  const { nokPhoneNumber } = useNokPhoneStore();
 
   if (!permission) {
     return (
@@ -48,10 +51,20 @@ export default function CameraScreen() {
         
         // Handle the captured photo
         console.log('Photo captured:', photo);
-        
-        // You can navigate back and pass the photo data, or save it, etc.
-        Alert.alert('Success', 'Photo captured successfully!');
-        
+
+        // Register the next-of-kin on the Midnight NOK contract (via backend).
+        // owner_identifier is derived from the authenticated user on the backend;
+        // nok_hash is derived from the NOK's phone number.
+        try {
+          await registerNok(nokPhoneNumber);
+          Alert.alert('Success', 'Your Next-of-Kin has been registered successfully.');
+        } catch (regError) {
+          Alert.alert(
+            'Registration failed',
+            regError instanceof Error ? regError.message : 'Could not register your Next-of-Kin. Please try again.',
+          );
+        }
+
       } catch (error) {
         console.error('Error taking picture:', error);
         Alert.alert('Error', 'Failed to capture photo');

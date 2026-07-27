@@ -1,3 +1,6 @@
+import { usePhoneStore } from '@/store/usePhoneStore';
+import { useNokPhoneStore } from '@/store/useNokPhoneScreen';
+import { approveNokLogin } from '@/utils/nok';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -11,6 +14,28 @@ export default function Fingerprint() {
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  // Owner's phone entered in the NOK sign-in flow, and (if captured) the NOK's
+  // own identifier. These map to the on-chain owner_identifier / nok_hash.
+  const { phoneNumber: ownerIdentifier } = usePhoneStore();
+  const { nokPhoneNumber: nokIdentifier } = useNokPhoneStore();
+
+  // Ask the backend (NOK contract admin) to approve this NOK-initiated login.
+  // NOTE: requires the NOK's own identifier to be captured in this flow, and the
+  // backend to resolve the owner identifier to the K33P userId used at
+  // registration. See keepmobile PROGRESS.md — remaining NOK integration items.
+  const approveWithContract = async (): Promise<boolean> => {
+    if (!ownerIdentifier || !nokIdentifier) {
+      console.warn('[NOK] Skipping approve-login: missing owner or NOK identifier.');
+      return true; // do not block the prototype flow when identifiers are absent
+    }
+    try {
+      return await approveNokLogin(ownerIdentifier, nokIdentifier);
+    } catch (error) {
+      console.error('[NOK] approve-login failed:', error);
+      return false;
+    }
+  };
 
   useEffect(() => {
     checkBiometricAvailability();
@@ -49,7 +74,12 @@ export default function Fingerprint() {
 
       if (result.success) {
         setCompletionPercentage(100);
-        router.push('/(home)');
+        const approved = await approveWithContract();
+        if (approved) {
+          router.push('/(home)');
+        } else {
+          Alert.alert('Access Denied', 'Your Next-of-Kin login could not be approved.');
+        }
       } else {
         setCompletionPercentage(0);
         if (result.error === 'user_fallback') {
